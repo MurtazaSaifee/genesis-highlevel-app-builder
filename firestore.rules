@@ -1,0 +1,9 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Matches any document during development; will be strictly scoped in Task 02/03
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
