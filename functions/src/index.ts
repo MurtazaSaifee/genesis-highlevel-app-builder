@@ -35,3 +35,9 @@ export { hlProxy, executeHighLevelProxy } from "./routes/highlevelProxy";
 // Export core token & sandbox services for internal backend consumption
 export * as tokenService from "./services/tokenService";
 export * as sandboxMockService from "./services/sandboxMockService";
+
+// Phase 3: Export LLM service, prompt contract, and stream parser
+export * as llmService from "./services/llmService";
+export * as appContractPrompt from "./prompts/appContractPrompt";
+export * as streamParser from "./utils/streamParser";
+
