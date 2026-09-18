@@ -49,6 +49,34 @@ export interface PublicIntegrationStatus {
 }
 
 /**
+ * Domain error when HighLevel account is disconnected or missing
+ */
+export class HighLevelNotConnectedError extends Error {
+  readonly statusCode = 403;
+  readonly code = "ERR_HL_NOT_CONNECTED";
+
+  constructor(userId: string) {
+    super(`HighLevel is not connected for user: ${userId}`);
+    this.name = "HighLevelNotConnectedError";
+  }
+}
+
+/**
+ * Domain error when a client requests data for a locationId outside their authorized scope
+ */
+export class HighLevelTenantMismatchError extends Error {
+  readonly statusCode = 403;
+  readonly code = "ERR_HL_TENANT_MISMATCH";
+
+  constructor(attemptedLocationId: string, authorizedLocationId: string) {
+    super(
+      `Cross-tenant access violation: requested location '${attemptedLocationId}' does not match authorized tenant '${authorizedLocationId}'.`
+    );
+    this.name = "HighLevelTenantMismatchError";
+  }
+}
+
+/**
  * Environment configuration for HighLevel OAuth
  */
 export function getHighLevelConfig() {
@@ -307,7 +335,7 @@ export async function getValidToken(userId: string): Promise<{
   const integration = await getIntegration(userId);
 
   if (!integration || integration.status !== "connected") {
-    throw new Error(`HighLevel is not connected for user: ${userId}`);
+    throw new HighLevelNotConnectedError(userId);
   }
 
   // Sandbox demo tokens do not require external HTTP refresh
@@ -380,6 +408,20 @@ export async function connectSandbox(
 export async function clearIntegration(userId: string): Promise<void> {
   const docRef = getIntegrationDocRef(userId);
   await docRef.delete();
+}
+
+/**
+ * Marks an integration document as expired (e.g. after receiving upstream 401 revocation)
+ */
+export async function markIntegrationExpired(userId: string): Promise<void> {
+  const docRef = getIntegrationDocRef(userId);
+  await docRef.set(
+    {
+      status: "expired",
+      updatedAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  );
 }
 
 /**

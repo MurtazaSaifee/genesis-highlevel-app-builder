@@ -29,5 +29,9 @@ export {
   getIntegrationStatusEndpoint as getIntegrationStatus,
 } from "./routes/oauth";
 
-// Export core token service for internal backend consumption
+// HighLevel API Proxy Endpoint & Decoupled Execution Service
+export { hlProxy, executeHighLevelProxy } from "./routes/highlevelProxy";
+
+// Export core token & sandbox services for internal backend consumption
 export * as tokenService from "./services/tokenService";
+export * as sandboxMockService from "./services/sandboxMockService";

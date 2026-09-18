@@ -1,6 +1,5 @@
 import { onRequest, Request } from "firebase-functions/v2/https";
 import { Response } from "express";
-import * as admin from "firebase-admin";
 import * as crypto from "crypto";
 import {
   getHighLevelConfig,
@@ -10,6 +9,7 @@ import {
   clearIntegration,
   getPublicStatus,
 } from "../services/tokenService";
+import { extractUserId } from "../utils/auth";
 
 /**
  * Standard HighLevel OAuth scopes required for Genesis
@@ -76,42 +76,6 @@ export function verifyOAuthState(
   }
 }
 
-/**
- * Extracts and verifies the authenticated Firebase User ID from request headers or development payload.
- */
-async function extractUserId(req: Request): Promise<string | null> {
-  const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith("Bearer ")) {
-    const idToken = authHeader.split("Bearer ")[1].trim();
-    try {
-      const decoded = await admin.auth().verifyIdToken(idToken);
-      return decoded.uid;
-    } catch (err) {
-      console.warn("[OAuth Route] Bearer token verification failed, rejecting:", err);
-      return null;
-    }
-  }
-
-  // Developer fallback for emulator testing and headless test runners
-  const isEmulator =
-    process.env.FUNCTIONS_EMULATOR === "true" ||
-    process.env.VITE_USE_EMULATORS === "true" ||
-    !process.env.NODE_ENV ||
-    process.env.NODE_ENV === "development";
-
-  if (isEmulator) {
-    const bodyUserId = req.body?.userId;
-    const queryUserId = req.query?.userId;
-    if (typeof bodyUserId === "string" && bodyUserId.trim().length > 0) {
-      return bodyUserId.trim();
-    }
-    if (typeof queryUserId === "string" && queryUserId.trim().length > 0) {
-      return queryUserId.trim();
-    }
-  }
-
-  return null;
-}
 
 /**
  * GET/POST /getAuthUrl: Generates the HighLevel OAuth authorization redirect URL
