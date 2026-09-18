@@ -1,8 +1,41 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
+import { useSettingsStore } from "./settings.ts";
+import {
+  streamGenerateApp,
+  type StreamController,
+} from "../lib/sseClient.ts";
 
 export type WorkspacePanel = "chat" | "code" | "preview";
 export type PreviewDevice = "desktop" | "tablet" | "mobile";
+
+export type MessageRole = "user" | "assistant" | "system";
+export type MessageStatus = "streaming" | "complete" | "aborted" | "error";
+
+export interface GenerationStats {
+  durationMs: number;
+  tokenCount: number;
+  filesCount: number;
+}
+
+export interface ChatMessage {
+  id: string;
+  role: MessageRole;
+  content: string;
+  timestamp: number;
+  status?: MessageStatus;
+  filesModified?: string[];
+  stats?: GenerationStats;
+  error?: string;
+}
+
+export const DEFAULT_REFINEMENT_SUGGESTIONS: string[] = [
+  "Add a search bar to filter records live",
+  "Add an 'Export to CSV' download button",
+  "Add form validation and inline error alerts",
+  "Improve responsive layout for mobile screens",
+  "Add dark mode theme styling",
+];
 
 export const DEVICE_WIDTHS: Record<PreviewDevice, string> = {
   desktop: "100%",
@@ -172,6 +205,12 @@ export const useWorkspaceStore = defineStore("workspace", () => {
   const isSettingsOpen = ref<boolean>(false);
   const isConnectModalOpen = ref<boolean>(false);
 
+  // Chat messaging & streaming controller state
+  const messages = ref<ChatMessage[]>([]);
+  const refinementSuggestions = ref<string[]>([...DEFAULT_REFINEMENT_SUGGESTIONS]);
+  const activeStreamController = ref<StreamController | null>(null);
+  const activeStreamingMessageId = ref<string | null>(null);
+
   // Number of visible desktop panels
   const visibleDesktopPanelCount = computed(() => {
     let count = 0;
@@ -340,6 +379,279 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     isConnectModalOpen.value = false;
   }
 
+  function addMessage(msg: Partial<ChatMessage> & { role: MessageRole; content: string }): ChatMessage {
+    const newMsg: ChatMessage = {
+      id: msg.id || `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      role: msg.role,
+      content: msg.content,
+      timestamp: msg.timestamp || Date.now(),
+      status: msg.status || "complete",
+      filesModified: msg.filesModified ? [...msg.filesModified] : [],
+      stats: msg.stats,
+      error: msg.error,
+    };
+    messages.value.push(newMsg);
+    return newMsg;
+  }
+
+  function clearChat() {
+    if (isStreaming.value) {
+      abortCurrentGeneration();
+    }
+    messages.value = [];
+    activeStreamingMessageId.value = null;
+    refinementSuggestions.value = [...DEFAULT_REFINEMENT_SUGGESTIONS];
+  }
+
+  function abortCurrentGeneration() {
+    if (activeStreamController.value) {
+      activeStreamController.value.abort();
+      activeStreamController.value = null;
+    }
+    setStreamingState(false, null);
+
+    if (activeStreamingMessageId.value) {
+      const target = messages.value.find((m) => m.id === activeStreamingMessageId.value);
+      if (target && target.status === "streaming") {
+        target.status = "aborted";
+        if (!target.content) {
+          target.content = "Generation cancelled by user.";
+        }
+      }
+      activeStreamingMessageId.value = null;
+    }
+  }
+
+  function updateRefinementSuggestions(lastPrompt: string, filesModified: string[]) {
+    const lowerPrompt = lastPrompt.toLowerCase();
+    const suggestions: string[] = [];
+
+    if (lowerPrompt.includes("contact") || lowerPrompt.includes("lead")) {
+      suggestions.push("Add live search filter for contact names and emails");
+      suggestions.push("Add an 'Export to CSV' button for contacts");
+      suggestions.push("Add tag management pills to contact cards");
+    } else if (lowerPrompt.includes("calendar") || lowerPrompt.includes("appoint")) {
+      suggestions.push("Add a calendar date range filter");
+      suggestions.push("Add appointment status badges (Confirmed/Cancelled)");
+      suggestions.push("Add appointment booking confirmation modal");
+    } else if (lowerPrompt.includes("conversation") || lowerPrompt.includes("message")) {
+      suggestions.push("Add quick reply preset message buttons");
+      suggestions.push("Add automatic message refresh interval");
+      suggestions.push("Add conversation channel filter (SMS vs Email)");
+    }
+
+    if (filesModified.some((f) => f.endsWith(".css"))) {
+      suggestions.push("Customize color palette with HighLevel brand theme");
+    }
+    if (filesModified.some((f) => f.endsWith(".js") || f.endsWith(".ts"))) {
+      suggestions.push("Add debounced input search and loading spinners");
+    }
+
+    // General suggestions
+    suggestions.push("Add form validation with error toast alerts");
+    suggestions.push("Optimize layout for mobile preview screens");
+    suggestions.push("Add dark mode toggle styling");
+
+    refinementSuggestions.value = Array.from(new Set(suggestions)).slice(0, 5);
+  }
+
+  function generateApp(
+    promptText: string,
+    options?: {
+      byok?: { apiKey?: string; baseURL?: string; model?: string };
+      baseUrl?: string;
+      projectId?: string;
+      getIdToken?: () => Promise<string | null>;
+      streamClientFn?: typeof streamGenerateApp;
+    }
+  ): StreamController | null {
+    const trimmed = promptText.trim();
+    if (!trimmed || isStreaming.value) {
+      return null;
+    }
+
+    // 1. Create and append User message
+    const userMsgId = `user-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const userMsg: ChatMessage = {
+      id: userMsgId,
+      role: "user",
+      content: trimmed,
+      timestamp: Date.now(),
+      status: "complete",
+    };
+    messages.value.push(userMsg);
+
+    // 2. Create and append Assistant streaming placeholder message
+    const assistantMsgId = `asst-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const assistantMsg: ChatMessage = {
+      id: assistantMsgId,
+      role: "assistant",
+      content: "",
+      timestamp: Date.now(),
+      status: "streaming",
+      filesModified: [],
+    };
+    messages.value.push(assistantMsg);
+    activeStreamingMessageId.value = assistantMsgId;
+
+    // 3. Compile multi-turn conversation history (prior completed turns)
+    const conversationHistory = messages.value
+      .filter(
+        (m) =>
+          m.id !== assistantMsgId &&
+          m.id !== userMsgId &&
+          (m.status === "complete" || m.status === "aborted")
+      )
+      .map((m) => ({
+        role: m.role as "user" | "assistant",
+        content: m.content,
+      }));
+
+    // 4. Resolve BYOK settings
+    let resolvedByok = options?.byok;
+    if (!resolvedByok) {
+      try {
+        const settingsStore = useSettingsStore();
+        if (settingsStore.apiKey) {
+          resolvedByok = {
+            apiKey: settingsStore.apiKey,
+            baseURL: settingsStore.baseUrl,
+            model: settingsStore.model,
+          };
+        }
+      } catch {
+        // Standalone test environment
+      }
+    }
+
+    // 5. Mutex & Streaming State
+    setStreamingState(true, null);
+
+    const streamFn = options?.streamClientFn || streamGenerateApp;
+    const startTime = Date.now();
+
+    try {
+      const controller = streamFn({
+        prompt: trimmed,
+        projectId: options?.projectId,
+        existingFiles: { ...files.value },
+        conversationHistory,
+        byok: resolvedByok,
+        baseUrl: options?.baseUrl,
+        getIdToken: options?.getIdToken,
+        callbacks: {
+          onStart: (_evt) => {
+            const target = messages.value.find((m) => m.id === assistantMsgId);
+            if (target) {
+              target.status = "streaming";
+            }
+          },
+          onToken: (evt) => {
+            const target = messages.value.find((m) => m.id === assistantMsgId);
+            if (target) {
+              target.content += evt.chunk;
+            }
+          },
+          onFileStart: (evt) => {
+            setStreamingState(true, evt.filename);
+            if (files.value[evt.filename] === undefined) {
+              files.value[evt.filename] = "";
+            }
+            if (!openFiles.value.includes(evt.filename)) {
+              openFiles.value.push(evt.filename);
+            }
+            activeFilename.value = evt.filename;
+
+            const target = messages.value.find((m) => m.id === assistantMsgId);
+            if (target) {
+              if (!target.filesModified) target.filesModified = [];
+              if (!target.filesModified.includes(evt.filename)) {
+                target.filesModified.push(evt.filename);
+              }
+            }
+          },
+          onFileContent: (evt) => {
+            appendToFileContent(evt.filename, evt.chunk);
+          },
+          onFileEnd: (evt) => {
+            setFileContent(evt.filename, evt.fullContent);
+            const target = messages.value.find((m) => m.id === assistantMsgId);
+            if (target) {
+              if (!target.filesModified) target.filesModified = [];
+              if (!target.filesModified.includes(evt.filename)) {
+                target.filesModified.push(evt.filename);
+              }
+            }
+          },
+          onDone: (evt) => {
+            const durationMs = Date.now() - startTime;
+            const target = messages.value.find((m) => m.id === assistantMsgId);
+            if (target) {
+              target.status = "complete";
+              if (evt.conversationText && !target.content) {
+                target.content = evt.conversationText;
+              }
+              if (evt.files) {
+                for (const [fn, content] of Object.entries(evt.files)) {
+                  setFileContent(fn, content);
+                  if (!target.filesModified?.includes(fn)) {
+                    target.filesModified?.push(fn);
+                  }
+                }
+              }
+              target.stats = {
+                durationMs: evt.stats?.durationMs || durationMs,
+                tokenCount: evt.stats?.tokenCount || 0,
+                filesCount: evt.stats?.filesCount || (target.filesModified?.length || 0),
+              };
+            }
+
+            updateRefinementSuggestions(trimmed, target?.filesModified || []);
+
+            setStreamingState(false, null);
+            activeStreamController.value = null;
+            activeStreamingMessageId.value = null;
+          },
+          onError: (evt) => {
+            const target = messages.value.find((m) => m.id === assistantMsgId);
+            if (target) {
+              if (evt.code === "REQUEST_ABORTED") {
+                target.status = "aborted";
+                if (!target.content) {
+                  target.content = "Generation cancelled by user.";
+                }
+              } else {
+                target.status = "error";
+                target.error = evt.message || "An error occurred during generation.";
+              }
+            }
+            setStreamingState(false, null);
+            activeStreamController.value = null;
+            activeStreamingMessageId.value = null;
+          },
+        },
+      });
+
+      if (isStreaming.value) {
+        activeStreamController.value = controller;
+      } else {
+        activeStreamController.value = null;
+      }
+      return controller;
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      const target = messages.value.find((m) => m.id === assistantMsgId);
+      if (target) {
+        target.status = "error";
+        target.error = errorMsg || "Failed to initiate generation.";
+      }
+      setStreamingState(false, null);
+      activeStreamController.value = null;
+      activeStreamingMessageId.value = null;
+      return null;
+    }
+  }
+
   return {
     activePanel,
     showChat,
@@ -355,6 +667,10 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     cursorPosition,
     isSettingsOpen,
     isConnectModalOpen,
+    messages,
+    refinementSuggestions,
+    activeStreamController,
+    activeStreamingMessageId,
     visibleDesktopPanelCount,
     desktopGridStyle,
     activeLanguage,
@@ -378,5 +694,10 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     closeSettings,
     openConnectModal,
     closeConnectModal,
+    addMessage,
+    clearChat,
+    abortCurrentGeneration,
+    updateRefinementSuggestions,
+    generateApp,
   };
 });

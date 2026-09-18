@@ -23,10 +23,10 @@ const emit = defineEmits<{
       <!-- Chat Panel -->
       <div v-show="workspaceStore.showChat" class="h-full overflow-hidden">
         <ChatPanelShell @promptSelected="(p) => emit('promptSelected', p)">
-          <template #messages>
+          <template #messages v-if="$slots['chat-messages']">
             <slot name="chat-messages" />
           </template>
-          <template #input>
+          <template #input v-if="$slots['chat-input']">
             <slot name="chat-input" />
           </template>
         </ChatPanelShell>
@@ -35,7 +35,7 @@ const emit = defineEmits<{
       <!-- Code Editor Panel -->
       <div v-show="workspaceStore.showCode" class="h-full overflow-hidden">
         <CodeEditorShell>
-          <template #editor>
+          <template #editor v-if="$slots['code-editor']">
             <slot name="code-editor" />
           </template>
         </CodeEditorShell>
@@ -47,7 +47,7 @@ const emit = defineEmits<{
           @refresh="emit('refreshPreview')"
           @openExternal="emit('openExternalPreview')"
         >
-          <template #preview>
+          <template #preview v-if="$slots['live-preview']">
             <slot name="live-preview" />
           </template>
         </PreviewPanelShell>
@@ -59,10 +59,10 @@ const emit = defineEmits<{
       <!-- Active Tab: Chat -->
       <div v-show="workspaceStore.activePanel === 'chat'" class="h-full w-full">
         <ChatPanelShell @promptSelected="(p) => emit('promptSelected', p)">
-          <template #messages>
+          <template #messages v-if="$slots['chat-messages']">
             <slot name="chat-messages" />
           </template>
-          <template #input>
+          <template #input v-if="$slots['chat-input']">
             <slot name="chat-input" />
           </template>
         </ChatPanelShell>
@@ -71,7 +71,7 @@ const emit = defineEmits<{
       <!-- Active Tab: Code -->
       <div v-show="workspaceStore.activePanel === 'code'" class="h-full w-full">
         <CodeEditorShell>
-          <template #editor>
+          <template #editor v-if="$slots['code-editor']">
             <slot name="code-editor" />
           </template>
         </CodeEditorShell>
@@ -83,7 +83,7 @@ const emit = defineEmits<{
           @refresh="emit('refreshPreview')"
           @openExternal="emit('openExternalPreview')"
         >
-          <template #preview>
+          <template #preview v-if="$slots['live-preview']">
             <slot name="live-preview" />
           </template>
         </PreviewPanelShell>

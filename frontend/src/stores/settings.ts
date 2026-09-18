@@ -32,10 +32,10 @@ export const PRESET_DEFAULTS: Record<LLMProviderPreset, Omit<BYOKSettings, "prov
 const STORAGE_KEY = "genesis_byok_settings";
 
 function getStorage(): Storage | null {
-  if (typeof window !== "undefined" && window.localStorage) {
+  if (typeof window !== "undefined" && window.localStorage && typeof window.localStorage.getItem === "function") {
     return window.localStorage;
   }
-  if (typeof globalThis !== "undefined" && globalThis.localStorage) {
+  if (typeof globalThis !== "undefined" && globalThis.localStorage && typeof globalThis.localStorage.getItem === "function") {
     return globalThis.localStorage as Storage;
   }
   return null;
