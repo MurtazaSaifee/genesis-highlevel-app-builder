@@ -7,7 +7,9 @@
     "shell": "npm run build && firebase functions:shell",
     "start": "npm run shell",
     "deploy": "firebase deploy --only functions",
-    "logs": "firebase functions:log"
+    "logs": "firebase functions:log",
+    "test": "node tests/oauth-state.test.mjs",
+    "test:integration": "firebase emulators:exec --only auth,firestore,functions \"node tests/oauth-integration.test.cjs && node tests/token-refresh.test.cjs\""
   },
   "engines": {
     "node": "22"

@@ -6,6 +6,7 @@ dotenv.config();
 
 if (!admin.apps.length) {
   admin.initializeApp();
+  admin.firestore().settings({ ignoreUndefinedProperties: true });
 }
 
 /**
@@ -18,3 +19,15 @@ export const health = onRequest({ cors: true }, (_req, res) => {
     service: "genesis-functions",
   });
 });
+
+// HighLevel OAuth & Integration Endpoints
+export {
+  getAuthUrl,
+  oauthCallback,
+  connectSandboxEndpoint as connectSandbox,
+  disconnectHighLevelEndpoint as disconnectHighLevel,
+  getIntegrationStatusEndpoint as getIntegrationStatus,
+} from "./routes/oauth";
+
+// Export core token service for internal backend consumption
+export * as tokenService from "./services/tokenService";
