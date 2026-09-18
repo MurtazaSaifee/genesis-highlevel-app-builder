@@ -36,8 +36,14 @@ export { hlProxy, executeHighLevelProxy } from "./routes/highlevelProxy";
 export * as tokenService from "./services/tokenService";
 export * as sandboxMockService from "./services/sandboxMockService";
 
-// Phase 3: Export LLM service, prompt contract, and stream parser
+// Phase 3: Export LLM service, prompt contract, stream parser, and SSE streaming endpoint
 export * as llmService from "./services/llmService";
 export * as appContractPrompt from "./prompts/appContractPrompt";
 export * as streamParser from "./utils/streamParser";
+export {
+  streamGenerate,
+  handleStreamGenerate,
+  runStreamGeneration,
+  sendSSE,
+} from "./routes/streamGenerate";
 
