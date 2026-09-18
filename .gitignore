@@ -11,12 +11,14 @@ pnpm-debug.log*
 .env.*.local
 
 # Build outputs
-dist/
-lib/
+frontend/dist/
+functions/lib/
 .output/
+*.tsbuildinfo
 
 # Firebase & Emulators
 .firebase/
+.emulator-data/
 firebase-debug.log*
 firestore-debug.log*
 ui-debug.log*
