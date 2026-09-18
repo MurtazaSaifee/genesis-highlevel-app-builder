@@ -20,8 +20,9 @@ export const functions = getFunctions(app, "us-central1");
 
 // Determine if local emulator suite should be used
 export const isUsingEmulators =
-  import.meta.env.VITE_USE_EMULATORS === "true" ||
-  import.meta.env.DEV;
+  import.meta.env.VITE_USE_EMULATORS !== undefined
+    ? import.meta.env.VITE_USE_EMULATORS === "true"
+    : import.meta.env.DEV;
 
 // Track if emulators have already been attached to prevent multiple connections in HMR
 let emulatorsConnected = false;

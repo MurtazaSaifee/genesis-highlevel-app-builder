@@ -6,8 +6,8 @@
     "dev": "npm --prefix frontend run dev",
     "dev:functions": "npm --prefix functions run build:watch",
     "build": "npm --prefix functions run build && npm --prefix frontend run build",
-    "emulators": "firebase emulators:start",
-    "emulators:export": "firebase emulators:start --export-on-exit=./.emulator-data --import=./.emulator-data"
+    "emulators": "firebase emulators:start --export-on-exit=./.emulator-data --import=./.emulator-data",
+    "emulators:clean": "firebase emulators:start"
   },
   "devDependencies": {}
 }
