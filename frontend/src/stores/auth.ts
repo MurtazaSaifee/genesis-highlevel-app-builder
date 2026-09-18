@@ -8,7 +8,7 @@ import {
   onAuthStateChanged,
   type AuthError,
 } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { auth } from "../lib/firebase.ts";
 
 function mapFirebaseError(error: unknown): string {
   if (typeof error === "object" && error !== null && "code" in error) {

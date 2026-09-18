@@ -1,6 +1,8 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import { useSettingsStore } from "./settings.ts";
+import { useProjectsStore } from "./projects.ts";
+import type { SaveStatus } from "../types/project.ts";
 import {
   streamGenerateApp,
   type StreamController,
@@ -213,6 +215,10 @@ export const useWorkspaceStore = defineStore("workspace", () => {
   // Preview live reload counter
   const previewReloadKey = ref<number>(0);
 
+  // Project file persistence & save status
+  const saveStatus = ref<SaveStatus>("saved");
+  let autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
+
   // Number of visible desktop panels
   const visibleDesktopPanelCount = computed(() => {
     let count = 0;
@@ -302,8 +308,74 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     }
   }
 
-  function setFileContent(filename: string, content: string) {
+  function setFileContent(filename: string, content: string, fromUserEdit = true) {
     files.value[filename] = content;
+    if (fromUserEdit && !isStreaming.value) {
+      saveStatus.value = "unsaved";
+      scheduleAutoSave();
+    }
+  }
+
+  function scheduleAutoSave() {
+    if (autoSaveTimer) {
+      clearTimeout(autoSaveTimer);
+    }
+    autoSaveTimer = setTimeout(() => {
+      forceSaveNow();
+    }, 1000);
+  }
+
+  async function forceSaveNow(): Promise<boolean> {
+    if (autoSaveTimer) {
+      clearTimeout(autoSaveTimer);
+      autoSaveTimer = null;
+    }
+
+    try {
+      const projectsStore = useProjectsStore();
+      if (!projectsStore.activeProjectId) {
+        saveStatus.value = "saved";
+        return true;
+      }
+
+      saveStatus.value = "saving";
+      const success = await projectsStore.saveProjectFiles(
+        projectsStore.activeProjectId,
+        { ...files.value },
+        activeFilename.value
+      );
+
+      if (success) {
+        saveStatus.value = "saved";
+        return true;
+      } else {
+        saveStatus.value = "error";
+        return false;
+      }
+    } catch (err) {
+      console.warn("[WorkspaceStore] File save skipped or failed:", err);
+      saveStatus.value = "error";
+      return false;
+    }
+  }
+
+  function loadProjectFiles(newFiles: Record<string, string>, targetActiveFilename?: string) {
+    if (autoSaveTimer) {
+      clearTimeout(autoSaveTimer);
+      autoSaveTimer = null;
+    }
+    files.value = { ...newFiles };
+    const filenames = Object.keys(newFiles);
+    openFiles.value = filenames.length > 0 ? [...filenames] : [...DEFAULT_FILES];
+    if (targetActiveFilename && newFiles[targetActiveFilename] !== undefined) {
+      activeFilename.value = targetActiveFilename;
+    } else if (newFiles["index.html"] !== undefined) {
+      activeFilename.value = "index.html";
+    } else if (filenames.length > 0) {
+      activeFilename.value = filenames[0];
+    }
+    saveStatus.value = "saved";
+    triggerPreviewReload();
   }
 
   function appendToFileContent(filename: string, chunk: string) {
@@ -329,6 +401,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
       openFiles.value.push(trimmed);
     }
     activeFilename.value = trimmed;
+    forceSaveNow();
     return true;
   }
 
@@ -349,6 +422,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
         activeFilename.value = remaining[0];
       }
     }
+    forceSaveNow();
     return true;
   }
 
@@ -533,13 +607,25 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     // 5. Mutex & Streaming State
     setStreamingState(true, null);
 
+    let activeProjectId = options?.projectId;
+    if (!activeProjectId) {
+      try {
+        const projectsStore = useProjectsStore();
+        if (projectsStore.activeProjectId) {
+          activeProjectId = projectsStore.activeProjectId;
+        }
+      } catch {
+        // Standalone test environment
+      }
+    }
+
     const streamFn = options?.streamClientFn || streamGenerateApp;
     const startTime = Date.now();
 
     try {
       const controller = streamFn({
         prompt: trimmed,
-        projectId: options?.projectId,
+        projectId: activeProjectId,
         existingFiles: { ...files.value },
         conversationHistory,
         byok: resolvedByok,
@@ -580,7 +666,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
             appendToFileContent(evt.filename, evt.chunk);
           },
           onFileEnd: (evt) => {
-            setFileContent(evt.filename, evt.fullContent);
+            setFileContent(evt.filename, evt.fullContent, false);
             const target = messages.value.find((m) => m.id === assistantMsgId);
             if (target) {
               if (!target.filesModified) target.filesModified = [];
@@ -599,7 +685,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
               }
               if (evt.files) {
                 for (const [fn, content] of Object.entries(evt.files)) {
-                  setFileContent(fn, content);
+                  setFileContent(fn, content, false);
                   if (!target.filesModified?.includes(fn)) {
                     target.filesModified?.push(fn);
                   }
@@ -618,6 +704,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
             activeStreamController.value = null;
             activeStreamingMessageId.value = null;
             triggerPreviewReload();
+            forceSaveNow();
           },
           onError: (evt) => {
             const target = messages.value.find((m) => m.id === assistantMsgId);
@@ -706,6 +793,10 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     abortCurrentGeneration,
     updateRefinementSuggestions,
     generateApp,
+    saveStatus,
+    loadProjectFiles,
+    forceSaveNow,
+    scheduleAutoSave,
     previewReloadKey,
     triggerPreviewReload,
   };

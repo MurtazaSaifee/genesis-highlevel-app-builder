@@ -3,17 +3,22 @@ import { onMounted, onUnmounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useHighLevelStore } from "@/stores/highlevel";
+import { useProjectsStore } from "@/stores/projects";
+import { useWorkspaceStore } from "@/stores/workspace";
 import AppHeader from "@/components/layout/AppHeader.vue";
 import SettingsDialog from "@/components/layout/SettingsDialog.vue";
 import HighLevelConnectModal from "@/components/layout/HighLevelConnectModal.vue";
+import ProjectModal from "@/components/workspace/ProjectModal.vue";
 import WorkspaceLayout from "@/components/workspace/WorkspaceLayout.vue";
 import { CheckCircle2, AlertCircle, X } from "lucide-vue-next";
 
 const router = useRouter();
 const authStore = useAuthStore();
 const hlStore = useHighLevelStore();
+const projectsStore = useProjectsStore();
+const workspaceStore = useWorkspaceStore();
 
-onMounted(() => {
+onMounted(async () => {
   // Check for OAuth redirect callback query params (?hl_connected=true or ?hl_error=...)
   if (window.location.search) {
     hlStore.handleUrlCallback(new URLSearchParams(window.location.search));
@@ -21,19 +26,42 @@ onMounted(() => {
 
   if (authStore.userId) {
     hlStore.startListening(authStore.userId);
+    await projectsStore.fetchProjects(authStore.userId);
+    if (projectsStore.activeProject) {
+      workspaceStore.loadProjectFiles(
+        projectsStore.activeProject.files,
+        projectsStore.activeProject.lastActiveFilename
+      );
+    }
   }
 });
 
 watch(
   () => authStore.userId,
-  (newUserId) => {
+  async (newUserId) => {
     if (newUserId) {
       hlStore.startListening(newUserId);
+      await projectsStore.fetchProjects(newUserId);
+      if (projectsStore.activeProject) {
+        workspaceStore.loadProjectFiles(
+          projectsStore.activeProject.files,
+          projectsStore.activeProject.lastActiveFilename
+        );
+      }
     } else {
       hlStore.stopListening();
     }
   }
 );
+
+function handleProjectCreated(_id: string) {
+  if (projectsStore.activeProject) {
+    workspaceStore.loadProjectFiles(
+      projectsStore.activeProject.files,
+      projectsStore.activeProject.lastActiveFilename
+    );
+  }
+}
 
 onUnmounted(() => {
   hlStore.stopListening();
@@ -102,5 +130,18 @@ function handleOpenExternalPreview() {
 
     <!-- HighLevel Connection Modal -->
     <HighLevelConnectModal />
+
+    <!-- Project Modals (Create & Edit) -->
+    <ProjectModal
+      :open="projectsStore.isCreateModalOpen"
+      mode="create"
+      @update:open="(val) => (projectsStore.isCreateModalOpen = val)"
+      @success="handleProjectCreated"
+    />
+    <ProjectModal
+      :open="projectsStore.isEditModalOpen"
+      mode="edit"
+      @update:open="(val) => (projectsStore.isEditModalOpen = val)"
+    />
   </div>
 </template>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
 import { useWorkspaceStore } from "@/stores/workspace";
 import MonacoEditor from "./MonacoEditor.vue";
 import FileTree from "./FileTree.vue";
@@ -15,11 +15,29 @@ import {
   PanelLeftOpen,
   X,
   Loader2,
+  Save,
+  CheckCheck,
+  AlertCircle,
 } from "lucide-vue-next";
 
 const workspaceStore = useWorkspaceStore();
 
 const copied = ref(false);
+
+function handleKeyDown(e: KeyboardEvent) {
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
+    e.preventDefault();
+    workspaceStore.forceSaveNow();
+  }
+}
+
+onMounted(() => {
+  window.addEventListener("keydown", handleKeyDown);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("keydown", handleKeyDown);
+});
 
 async function handleCopy() {
   const content = workspaceStore.files[workspaceStore.activeFilename] || "";
@@ -127,6 +145,21 @@ function handleCloseTab(filename: string, event: MouseEvent) {
       <div class="flex items-center gap-1 shrink-0 ml-2">
         <button
           type="button"
+          @click="workspaceStore.forceSaveNow"
+          :disabled="workspaceStore.saveStatus === 'saving'"
+          class="h-7 px-2 rounded-md text-xs text-muted-foreground hover:text-foreground hover:bg-muted flex items-center gap-1.5 transition-colors cursor-pointer"
+          title="Save to Firestore (Cmd+S / Ctrl+S)"
+        >
+          <Loader2 v-if="workspaceStore.saveStatus === 'saving'" class="h-3 w-3 animate-spin text-amber-500" />
+          <CheckCheck v-else-if="workspaceStore.saveStatus === 'saved'" class="h-3.5 w-3.5 text-emerald-500" />
+          <Save v-else class="h-3.5 w-3.5 text-amber-500" />
+          <span class="hidden md:inline text-[11px]">
+            {{ workspaceStore.saveStatus === 'saving' ? 'Saving' : workspaceStore.saveStatus === 'saved' ? 'Saved' : 'Save' }}
+          </span>
+        </button>
+
+        <button
+          type="button"
           @click="handleCopy"
           class="h-7 px-2.5 rounded-md text-xs text-muted-foreground hover:text-foreground hover:bg-muted flex items-center gap-1.5 transition-colors cursor-pointer"
           title="Copy active file content"
@@ -164,9 +197,21 @@ function handleCloseTab(filename: string, event: MouseEvent) {
           <Loader2 class="h-3 w-3 animate-spin text-amber-500" />
           <span>Streaming {{ workspaceStore.streamingFilename || 'code' }}...</span>
         </span>
+        <span v-else-if="workspaceStore.saveStatus === 'saving'" class="flex items-center gap-1.5 text-amber-500">
+          <Loader2 class="h-3 w-3 animate-spin text-amber-500" />
+          <span>Saving to Cloud...</span>
+        </span>
+        <span v-else-if="workspaceStore.saveStatus === 'unsaved'" class="flex items-center gap-1.5 text-amber-500">
+          <span class="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+          <span>Unsaved edits</span>
+        </span>
+        <span v-else-if="workspaceStore.saveStatus === 'error'" class="flex items-center gap-1.5 text-destructive">
+          <AlertCircle class="h-3 w-3" />
+          <span>Cloud sync failed</span>
+        </span>
         <span v-else class="flex items-center gap-1.5 text-foreground">
           <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-          <span>Ready</span>
+          <span>Saved to Cloud</span>
         </span>
         <span class="hidden sm:inline">UTF-8</span>
       </div>

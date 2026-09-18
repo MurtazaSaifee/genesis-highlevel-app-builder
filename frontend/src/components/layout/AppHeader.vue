@@ -4,6 +4,7 @@ import { useHighLevelStore } from "@/stores/highlevel";
 import { useSettingsStore } from "@/stores/settings";
 import { useWorkspaceStore, type WorkspacePanel } from "@/stores/workspace";
 import Button from "@/components/ui/Button.vue";
+import ProjectSelector from "@/components/workspace/ProjectSelector.vue";
 import {
   Sparkles,
   Radio,
@@ -33,22 +34,29 @@ function handlePanelClick(panel: WorkspacePanel) {
 
 <template>
   <header class="h-14 border-b border-border bg-card/70 backdrop-blur-md px-4 flex items-center justify-between sticky top-0 z-30 select-none">
-    <!-- Brand Section -->
-    <div class="flex items-center gap-3">
-      <div class="h-8 w-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center font-bold shadow-sm ring-1 ring-primary/20">
-        <Sparkles class="h-4 w-4" />
-      </div>
-      <div>
-        <div class="flex items-center gap-2">
-          <span class="font-bold text-sm tracking-tight text-foreground">Genesis</span>
-          <span class="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-primary/10 text-primary border border-primary/20 font-mono">
-            v0.1
-          </span>
+    <!-- Brand & Project Section -->
+    <div class="flex items-center gap-2 sm:gap-3">
+      <div class="flex items-center gap-2 sm:gap-3">
+        <div class="h-8 w-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center font-bold shadow-sm ring-1 ring-primary/20 shrink-0">
+          <Sparkles class="h-4 w-4" />
         </div>
-        <p class="text-[11px] text-muted-foreground hidden sm:block">
-          AI HighLevel App Builder
-        </p>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-bold text-sm tracking-tight text-foreground">Genesis</span>
+            <span class="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-primary/10 text-primary border border-primary/20 font-mono">
+              v0.1
+            </span>
+          </div>
+          <p class="text-[11px] text-muted-foreground hidden md:block">
+            AI HighLevel App Builder
+          </p>
+        </div>
       </div>
+
+      <div class="h-5 w-px bg-border/80 hidden sm:block"></div>
+
+      <!-- Project Selector -->
+      <ProjectSelector />
     </div>
 
     <!-- Center: Mobile/Tablet Responsive Tab Switcher (<1024px) -->

@@ -1,8 +1,8 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
 import { doc, onSnapshot, type Unsubscribe } from "firebase/firestore";
-import { db, auth } from "@/lib/firebase";
-import { useAuthStore } from "./auth";
+import { db, auth } from "../lib/firebase.ts";
+import { useAuthStore } from "./auth.ts";
 
 export interface HighLevelIntegrationState {
   userId: string;
@@ -31,7 +31,8 @@ export const useHighLevelStore = defineStore("highlevel", () => {
   let unsubscribeSnapshot: Unsubscribe | null = null;
 
   const functionsBaseUrl =
-    import.meta.env.VITE_FUNCTIONS_URL ||
+    (typeof import.meta !== "undefined" && import.meta.env?.VITE_FUNCTIONS_URL) ||
+    (typeof process !== "undefined" && process.env?.VITE_FUNCTIONS_URL) ||
     "http://127.0.0.1:5001/genesis-hl-builder-1/us-central1";
 
   /**
