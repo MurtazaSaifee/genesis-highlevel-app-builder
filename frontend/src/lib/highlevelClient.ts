@@ -183,83 +183,118 @@ export function createHighLevelClient(options: HighLevelClientOptions = {}) {
     return (await res.json()) as T;
   }
 
+  const contacts = {
+    /**
+     * List & search contacts with pagination
+     */
+    list: (params: { query?: string; limit?: number; startAfterId?: string } = {}) =>
+      request<HighLevelPaginatedContacts>("/contacts", "GET", params),
+
+    /**
+     * Get a single contact by ID
+     */
+    get: (id: string) =>
+      request<{ contact: HighLevelContact }>(`/contacts/${encodeURIComponent(id)}`, "GET"),
+
+    /**
+     * Create a new contact
+     */
+    create: (data: Partial<HighLevelContact>) =>
+      request<{ contact: HighLevelContact }>("/contacts", "POST", {}, data),
+
+    /**
+     * Update an existing contact
+     */
+    update: (id: string, data: Partial<HighLevelContact>) =>
+      request<{ contact: HighLevelContact }>(`/contacts/${encodeURIComponent(id)}`, "PUT", {}, data),
+  };
+
+  const conversations = {
+    /**
+     * List recent conversations with search and pagination
+     */
+    list: (params: { query?: string; limit?: number; startAfterId?: string } = {}) =>
+      request<HighLevelPaginatedConversations>("/conversations", "GET", params),
+
+    /**
+     * Get thread message history for a conversation
+     */
+    getMessages: (conversationId: string, params: { limit?: number } = {}) =>
+      request<{ messages: { messages: HighLevelMessage[]; lastMessageId: string | null } }>(
+        `/conversations/${encodeURIComponent(conversationId)}/messages`,
+        "GET",
+        params
+      ),
+
+    /**
+     * Send a message to a contact or existing conversation
+     */
+    sendMessage: (data: {
+      conversationId?: string;
+      contactId?: string;
+      message: string;
+      type?: "SMS" | "Email";
+    }) => request<{ messageId: string; status: string; message: HighLevelMessage }>("/conversations/messages", "POST", {}, data),
+  };
+
+  const calendars = {
+    /**
+     * List all active calendars for the location
+     */
+    list: () => request<{ calendars: HighLevelCalendar[] }>("/calendars", "GET"),
+
+    /**
+     * List scheduled appointments/events within a date range
+     */
+    getAppointments: (params: { calendarId?: string; startTime?: string; endTime?: string } = {}) =>
+      request<{ events: HighLevelCalendarEvent[] }>("/calendars/events", "GET", params),
+
+    /**
+     * Query available booking slots for a calendar
+     */
+    getFreeSlots: (calendarId: string, params: { startDate?: string; endDate?: string } = {}) =>
+      request<Record<string, { slots: string[] }>>(
+        `/calendars/${encodeURIComponent(calendarId)}/free-slots`,
+        "GET",
+        params
+      ),
+  };
+
+  /**
+   * Unified RPC Request Dispatcher for the Live Preview sandboxed runner.
+   * Decouples RPC transport from UI components for live pairing extension.
+   */
+  async function dispatchRpc(
+    service: string,
+    action: string,
+    endpoint: string,
+    method: string,
+    params?: Record<string, unknown>,
+    body?: unknown
+  ): Promise<unknown> {
+    if (service === "contacts") {
+      if (action === "list") return await contacts.list(params as Parameters<typeof contacts.list>[0]);
+      if (action === "get") return await contacts.get(String(params?.id || (body as { id?: string })?.id || ""));
+      if (action === "create") return await contacts.create((body || params) as Partial<HighLevelContact>);
+      if (action === "update") return await contacts.update(String(params?.id || (body as { id?: string })?.id || ""), (body || params) as Partial<HighLevelContact>);
+    } else if (service === "conversations") {
+      if (action === "list") return await conversations.list(params as Parameters<typeof conversations.list>[0]);
+      if (action === "getMessages") return await conversations.getMessages(String(params?.id || params?.conversationId || ""), params as { limit?: number });
+      if (action === "sendMessage") return await conversations.sendMessage((body || params) as Parameters<typeof conversations.sendMessage>[0]);
+    } else if (service === "calendars") {
+      if (action === "list") return await calendars.list();
+      if (action === "getAppointments") return await calendars.getAppointments(params as Parameters<typeof calendars.getAppointments>[0]);
+      if (action === "getFreeSlots") return await calendars.getFreeSlots(String(params?.id || params?.calendarId || ""), params as Parameters<typeof calendars.getFreeSlots>[1]);
+    }
+    return await request(endpoint || `/${service}`, (method as "GET" | "POST" | "PUT" | "DELETE") || "GET", params, body);
+  }
+
   return {
-    contacts: {
-      /**
-       * List & search contacts with pagination
-       */
-      list: (params: { query?: string; limit?: number; startAfterId?: string } = {}) =>
-        request<HighLevelPaginatedContacts>("/contacts", "GET", params),
-
-      /**
-       * Get a single contact by ID
-       */
-      get: (id: string) =>
-        request<{ contact: HighLevelContact }>(`/contacts/${encodeURIComponent(id)}`, "GET"),
-
-      /**
-       * Create a new contact
-       */
-      create: (data: Partial<HighLevelContact>) =>
-        request<{ contact: HighLevelContact }>("/contacts", "POST", {}, data),
-
-      /**
-       * Update an existing contact
-       */
-      update: (id: string, data: Partial<HighLevelContact>) =>
-        request<{ contact: HighLevelContact }>(`/contacts/${encodeURIComponent(id)}`, "PUT", {}, data),
-    },
-
-    conversations: {
-      /**
-       * List recent conversations with search and pagination
-       */
-      list: (params: { query?: string; limit?: number; startAfterId?: string } = {}) =>
-        request<HighLevelPaginatedConversations>("/conversations", "GET", params),
-
-      /**
-       * Get thread message history for a conversation
-       */
-      getMessages: (conversationId: string, params: { limit?: number } = {}) =>
-        request<{ messages: { messages: HighLevelMessage[]; lastMessageId: string | null } }>(
-          `/conversations/${encodeURIComponent(conversationId)}/messages`,
-          "GET",
-          params
-        ),
-
-      /**
-       * Send a message to a contact or existing conversation
-       */
-      sendMessage: (data: {
-        conversationId?: string;
-        contactId?: string;
-        message: string;
-        type?: "SMS" | "Email";
-      }) => request<{ messageId: string; status: string; message: HighLevelMessage }>("/conversations/messages", "POST", {}, data),
-    },
-
-    calendars: {
-      /**
-       * List all active calendars for the location
-       */
-      list: () => request<{ calendars: HighLevelCalendar[] }>("/calendars", "GET"),
-
-      /**
-       * List scheduled appointments/events within a date range
-       */
-      getAppointments: (params: { calendarId?: string; startTime?: string; endTime?: string } = {}) =>
-        request<{ events: HighLevelCalendarEvent[] }>("/calendars/events", "GET", params),
-
-      /**
-       * Query available booking slots for a calendar
-       */
-      getFreeSlots: (calendarId: string, params: { startDate?: string; endDate?: string } = {}) =>
-        request<Record<string, { slots: string[] }>>(
-          `/calendars/${encodeURIComponent(calendarId)}/free-slots`,
-          "GET",
-          params
-        ),
-    },
+    request,
+    dispatchRpc,
+    contacts,
+    conversations,
+    calendars,
   };
 }
 

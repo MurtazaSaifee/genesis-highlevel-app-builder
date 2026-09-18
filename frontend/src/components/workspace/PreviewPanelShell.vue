@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { ref, computed } from "vue";
 import { useWorkspaceStore, DEVICE_WIDTHS, type PreviewDevice } from "@/stores/workspace";
+import { useHighLevelStore } from "@/stores/highlevel";
+import PreviewRunner from "./PreviewRunner.vue";
 import {
   Monitor,
   Tablet,
@@ -8,12 +10,25 @@ import {
   RotateCw,
   ExternalLink,
   ShieldCheck,
-  Globe,
+  Building2,
 } from "lucide-vue-next";
 
 const workspaceStore = useWorkspaceStore();
+const hlStore = useHighLevelStore();
+
+const runnerRef = ref<InstanceType<typeof PreviewRunner> | null>(null);
 
 const currentWidth = computed(() => DEVICE_WIDTHS[workspaceStore.previewDevice]);
+
+const addressBarUrl = computed(() => {
+  if (hlStore.isConnected) {
+    if (hlStore.isSandbox) {
+      return `sandbox://${hlStore.locationId || "demo-location"}/app`;
+    }
+    return `hl://${hlStore.locationId || "connected-location"}/app`;
+  }
+  return "sandbox://highlevel-app";
+});
 
 const emit = defineEmits<{
   (e: "refresh"): void;
@@ -23,6 +38,26 @@ const emit = defineEmits<{
 function handleDeviceSelect(device: PreviewDevice) {
   workspaceStore.setPreviewDevice(device);
 }
+
+function handleRefresh() {
+  if (runnerRef.value) {
+    runnerRef.value.reload();
+  }
+  emit("refresh");
+}
+
+function handleOpenExternal() {
+  if (runnerRef.value) {
+    runnerRef.value.openExternal();
+  }
+  emit("openExternal");
+}
+
+defineExpose({
+  runnerRef,
+  reload: handleRefresh,
+  openExternal: handleOpenExternal,
+});
 </script>
 
 <template>
@@ -30,9 +65,13 @@ function handleDeviceSelect(device: PreviewDevice) {
     <!-- Header with URL Bar & Responsive Device Switchers -->
     <div class="h-10 px-2 sm:px-3 border-b border-border flex items-center justify-between bg-muted/40 shrink-0">
       <!-- Simulated Address Bar -->
-      <div class="flex items-center gap-1.5 flex-1 max-w-[200px] sm:max-w-xs bg-background px-2 py-1 rounded-md border border-border/80 text-[11px] font-mono text-muted-foreground truncate">
-        <ShieldCheck class="h-3 w-3 text-emerald-500 shrink-0" />
-        <span class="truncate">sandbox://highlevel-app</span>
+      <div
+        class="flex items-center gap-1.5 flex-1 max-w-[200px] sm:max-w-xs bg-background px-2 py-1 rounded-md border border-border/80 text-[11px] font-mono text-muted-foreground truncate"
+        :title="`Current Preview Environment: ${addressBarUrl}`"
+      >
+        <ShieldCheck v-if="hlStore.isConnected" class="h-3 w-3 text-emerald-500 shrink-0" />
+        <Building2 v-else class="h-3 w-3 text-blue-500 shrink-0" />
+        <span class="truncate">{{ addressBarUrl }}</span>
       </div>
 
       <!-- Center: Responsive Device Mode Toggles -->
@@ -84,7 +123,7 @@ function handleDeviceSelect(device: PreviewDevice) {
       <div class="flex items-center gap-1">
         <button
           type="button"
-          @click="emit('refresh')"
+          @click="handleRefresh"
           class="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
           title="Reload Preview"
         >
@@ -93,7 +132,7 @@ function handleDeviceSelect(device: PreviewDevice) {
 
         <button
           type="button"
-          @click="emit('openExternal')"
+          @click="handleOpenExternal"
           class="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
           title="Open in new window"
         >
@@ -124,17 +163,8 @@ function handleDeviceSelect(device: PreviewDevice) {
 
         <div class="flex-1 w-full h-full relative overflow-hidden bg-white">
           <slot name="preview">
-            <!-- Sandboxed Live Preview Placeholder Shell (Task 11 runner) -->
-            <div class="h-full w-full flex flex-col items-center justify-center p-6 text-center text-slate-500 select-none">
-              <Globe class="h-10 w-10 text-slate-400 mb-3" />
-              <p class="font-semibold text-xs text-slate-700">Sandboxed Live Preview Engine</p>
-              <p class="text-[11px] text-slate-400 max-w-xs mt-1">
-                Renders generated code inside an isolated sandbox with HighLevel API proxy runtime.
-              </p>
-              <span class="mt-3 px-2 py-0.5 rounded text-[10px] font-mono bg-slate-100 border border-slate-200 text-slate-500">
-                Mounting in Task 11
-              </span>
-            </div>
+            <!-- Sandboxed Live Preview Runner Component -->
+            <PreviewRunner ref="runnerRef" />
           </slot>
         </div>
       </div>

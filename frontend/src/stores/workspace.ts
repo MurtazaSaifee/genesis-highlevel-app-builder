@@ -210,6 +210,8 @@ export const useWorkspaceStore = defineStore("workspace", () => {
   const refinementSuggestions = ref<string[]>([...DEFAULT_REFINEMENT_SUGGESTIONS]);
   const activeStreamController = ref<StreamController | null>(null);
   const activeStreamingMessageId = ref<string | null>(null);
+  // Preview live reload counter
+  const previewReloadKey = ref<number>(0);
 
   // Number of visible desktop panels
   const visibleDesktopPanelCount = computed(() => {
@@ -455,6 +457,10 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     refinementSuggestions.value = Array.from(new Set(suggestions)).slice(0, 5);
   }
 
+  function triggerPreviewReload() {
+    previewReloadKey.value++;
+  }
+
   function generateApp(
     promptText: string,
     options?: {
@@ -611,6 +617,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
             setStreamingState(false, null);
             activeStreamController.value = null;
             activeStreamingMessageId.value = null;
+            triggerPreviewReload();
           },
           onError: (evt) => {
             const target = messages.value.find((m) => m.id === assistantMsgId);
@@ -699,5 +706,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     abortCurrentGeneration,
     updateRefinementSuggestions,
     generateApp,
+    previewReloadKey,
+    triggerPreviewReload,
   };
 });
