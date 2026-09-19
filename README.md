@@ -31,7 +31,7 @@
 * **Live Deployed Frontend (Firebase Hosting):** [https://genesis-hl-builder-1.web.app](https://genesis-hl-builder-1.web.app)
 * **Cloud Functions Base URL (Emulator):** `http://127.0.0.1:5001/genesis-hl-builder-1/us-central1`
 * **Production Functions Gateway:** `https://us-central1-genesis-hl-builder-1.cloudfunctions.net`
-* **Loom Video Walkthrough:** [Watch 5-Minute Video Walkthrough](https://www.loom.com/share/your-loom-video-id)
+* **Loom Video Walkthrough:** [Watch 5-Minute Video Walkthrough](https://www.loom.com/share/7bbc27d0e1b24a2b920b3378d675484e)
 
 ---
 
@@ -307,8 +307,7 @@ A complete 5-minute video walkthrough demonstrating the application end-to-end:
 * Monaco multi-tab code editing and side-by-side Diff Viewer
 * Snapshot history inspection and point-in-time version control rollback
 
-🎬 **[Watch the 5-Minute Video Walkthrough on Loom](https://www.loom.com/share/your-loom-video-id)**
-*(Replace placeholder URL with your recorded Loom link prior to final submission)*
+🎬 **[Watch the 5-Minute Video Walkthrough on Loom](https://www.loom.com/share/7bbc27d0e1b24a2b920b3378d675484e)**
 
 ---
 
