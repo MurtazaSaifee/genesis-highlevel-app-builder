@@ -16,6 +16,14 @@ globalThis.localStorage = {
   clear: () => memoryStorage.clear(),
 };
 
+async function ensureAuthenticated(authStore) {
+  try {
+    await authStore.signUp(`evaluator_${Date.now()}_${Math.random().toString(36).slice(2, 6)}@genesis.app`, "GenesisPass123!");
+  } catch (_e) {
+    authStore.user = { uid: "usr_evaluator_789", email: "evaluator@genesis.app" };
+  }
+}
+
 async function runTests() {
   // Test Suite 1: Baseline Resolution & Code Diff Generation
   console.log("\n1. Testing Baseline Snapshot Resolution & Code Extraction...");
@@ -24,7 +32,7 @@ async function runTests() {
     memoryStorage.clear();
 
     const authStore = useAuthStore();
-    authStore.user = { uid: "usr_tester_1", email: "tester@genesis.io" };
+    await ensureAuthenticated(authStore);
 
     const workspaceStore = useWorkspaceStore();
     const snapshotsStore = useSnapshotsStore();

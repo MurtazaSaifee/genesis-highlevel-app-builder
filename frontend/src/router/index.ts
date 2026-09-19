@@ -3,6 +3,7 @@ import { useAuthStore } from "@/stores/auth";
 import WorkspaceView from "@/views/WorkspaceView.vue";
 import LoginView from "@/views/LoginView.vue";
 import RegisterView from "@/views/RegisterView.vue";
+import OAuthCallbackView from "@/views/OAuthCallbackView.vue";
 
 const routes: RouteRecordRaw[] = [
   {
@@ -22,6 +23,11 @@ const routes: RouteRecordRaw[] = [
     name: "register",
     component: RegisterView,
     meta: { guestOnly: true },
+  },
+  {
+    path: "/oauth/callback",
+    name: "oauth-callback",
+    component: OAuthCallbackView,
   },
   {
     path: "/:pathMatch(.*)*",

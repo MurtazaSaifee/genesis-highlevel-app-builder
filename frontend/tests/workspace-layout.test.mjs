@@ -26,7 +26,7 @@ async function runTests() {
     // Default state
     assert.equal(store.provider, "google");
     assert.equal(store.baseUrl, PRESET_DEFAULTS.google.baseUrl);
-    assert.equal(store.model, "gemini-2.0-flash");
+    assert.equal(store.model, "gemini-3.1-flash-lite");
     assert.equal(store.hasCustomKey, false);
     assert.equal(store.byokPayload, undefined);
 
@@ -64,7 +64,7 @@ async function runTests() {
     // Test resetDefaults
     store.resetDefaults();
     assert.equal(store.provider, "google");
-    assert.equal(store.model, "gemini-2.0-flash");
+    assert.equal(store.model, "gemini-3.1-flash-lite");
     assert.equal(store.baseUrl, PRESET_DEFAULTS.google.baseUrl);
 
     console.log("   ✓ BYOK settings correctly manages presets, keys, and persistence");
