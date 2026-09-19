@@ -1,7 +1,11 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 import { useRouter, useRoute, RouterLink } from "vue-router";
-import { useAuthStore } from "@/stores/auth";
+import { useAuthStore, executeSessionResetHooks } from "@/stores/auth";
+import { useWorkspaceStore } from "@/stores/workspace";
+import { useProjectsStore } from "@/stores/projects";
+import { useSnapshotsStore } from "@/stores/snapshots";
+import { useHighLevelStore } from "@/stores/highlevel";
 import Button from "@/components/ui/Button.vue";
 import Input from "@/components/ui/Input.vue";
 import Card from "@/components/ui/Card.vue";
@@ -14,6 +18,22 @@ const authStore = useAuthStore();
 const email = ref("");
 const password = ref("");
 const formError = ref<string | null>(null);
+
+function purgeState() {
+  executeSessionResetHooks();
+  try {
+    useWorkspaceStore().reset();
+    useProjectsStore().reset();
+    useSnapshotsStore().reset();
+    useHighLevelStore().reset();
+  } catch {
+    // ignore
+  }
+}
+
+onMounted(() => {
+  purgeState();
+});
 
 function validateForm(): boolean {
   formError.value = null;
@@ -43,7 +63,9 @@ async function handleLogin() {
   if (!validateForm()) return;
 
   try {
+    purgeState();
     await authStore.signIn(email.value, password.value);
+    purgeState();
     // Security: Validate and sanitize redirect to prevent open-redirect vulnerabilities
     const rawRedirect = route.query.redirect;
     const redirectPath =

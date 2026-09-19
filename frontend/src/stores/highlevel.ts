@@ -2,7 +2,7 @@ import { defineStore } from "pinia";
 import { ref } from "vue";
 import { doc, onSnapshot, type Unsubscribe } from "firebase/firestore";
 import { db, auth } from "../lib/firebase.ts";
-import { useAuthStore } from "./auth.ts";
+import { useAuthStore, registerSessionResetHook } from "./auth.ts";
 
 export interface HighLevelIntegrationState {
   userId: string;
@@ -224,6 +224,22 @@ export const useHighLevelStore = defineStore("highlevel", () => {
     successNotification.value = null;
   }
 
+  /**
+   * Complete multi-tenant session reset for HighLevel integration
+   */
+  function reset() {
+    stopListening();
+    isConnected.value = false;
+    locationId.value = null;
+    companyId.value = null;
+    isSandbox.value = false;
+    expiresAt.value = null;
+    scopes.value = [];
+    loading.value = false;
+    error.value = null;
+    successNotification.value = null;
+  }
+
   return {
     isConnected,
     locationId,
@@ -241,5 +257,14 @@ export const useHighLevelStore = defineStore("highlevel", () => {
     disconnect,
     handleUrlCallback,
     clearNotifications,
+    reset,
   };
+});
+
+registerSessionResetHook(() => {
+  try {
+    useHighLevelStore().reset();
+  } catch {
+    // Pinia not yet initialized
+  }
 });

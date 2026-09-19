@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 import { createPinia, setActivePinia } from "pinia";
 import { useAuthStore } from "../src/stores/auth.ts";
 import { useHighLevelStore } from "../src/stores/highlevel.ts";
@@ -11,6 +13,13 @@ import {
   generateConsoleCaptureScript,
 } from "../src/lib/previewBundler.ts";
 import { createHighLevelClient } from "../src/lib/highlevelClient.ts";
+
+try {
+  const envPath = path.resolve(process.cwd(), ".env.local");
+  if (fs.existsSync(envPath)) {
+    process.loadEnvFile(envPath);
+  }
+} catch (_e) {}
 
 console.log("=== Running Task 15 Frontend End-to-End Workflow Tests ===");
 
@@ -328,7 +337,11 @@ body { font-family: system-ui, -apple-system, sans-serif; }
   console.log("=======================================================\n");
 }
 
-runTests().catch((err) => {
-  console.error("Task 15 Frontend E2E test failure:", err);
-  process.exit(1);
-});
+runTests()
+  .then(() => {
+    process.exit(0);
+  })
+  .catch((err) => {
+    console.error("Task 15 Frontend E2E test failure:", err);
+    process.exit(1);
+  });

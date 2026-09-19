@@ -1,9 +1,18 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 import { createPinia, setActivePinia } from "pinia";
 import { useWorkspaceStore } from "../src/stores/workspace.ts";
 import { useSnapshotsStore } from "../src/stores/snapshots.ts";
 import { useProjectsStore } from "../src/stores/projects.ts";
 import { useAuthStore } from "../src/stores/auth.ts";
+
+try {
+  const envPath = path.resolve(process.cwd(), ".env.local");
+  if (fs.existsSync(envPath)) {
+    process.loadEnvFile(envPath);
+  }
+} catch (_e) {}
 
 console.log("=== Running Task 14 Monaco Diff Viewer & Version Comparison Tests ===");
 

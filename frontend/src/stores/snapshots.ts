@@ -9,7 +9,7 @@ import {
   limit,
 } from "firebase/firestore";
 import { db } from "../lib/firebase.ts";
-import { useAuthStore } from "./auth.ts";
+import { useAuthStore, registerSessionResetHook } from "./auth.ts";
 import { useProjectsStore } from "./projects.ts";
 import { useWorkspaceStore } from "./workspace.ts";
 import type {
@@ -248,6 +248,18 @@ export const useSnapshotsStore = defineStore("snapshots", () => {
     }
   }
 
+  /**
+   * Complete multi-tenant session reset for snapshots
+   */
+  function reset() {
+    snapshots.value = [];
+    loading.value = false;
+    restoring.value = false;
+    error.value = null;
+    isSheetOpen.value = false;
+    selectedSnapshotId.value = null;
+  }
+
   return {
     snapshots,
     loading,
@@ -265,5 +277,14 @@ export const useSnapshotsStore = defineStore("snapshots", () => {
     createSnapshot,
     takeManualSnapshot,
     restoreSnapshot,
+    reset,
   };
+});
+
+registerSessionResetHook(() => {
+  try {
+    useSnapshotsStore().reset();
+  } catch {
+    // Pinia not yet initialized
+  }
 });

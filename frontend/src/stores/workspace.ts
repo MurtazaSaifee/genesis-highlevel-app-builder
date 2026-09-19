@@ -3,6 +3,7 @@ import { ref, computed } from "vue";
 import { useSettingsStore } from "./settings.ts";
 import { useProjectsStore } from "./projects.ts";
 import { useSnapshotsStore } from "./snapshots.ts";
+import { registerSessionResetHook } from "./auth.ts";
 import type { SaveStatus } from "../types/project.ts";
 import {
   streamGenerateApp,
@@ -310,6 +311,9 @@ export const useWorkspaceStore = defineStore("workspace", () => {
   }
 
   function setFileContent(filename: string, content: string, fromUserEdit = true) {
+    if (files.value[filename] === content) {
+      return;
+    }
     files.value[filename] = content;
     if (fromUserEdit && !isStreaming.value) {
       saveStatus.value = "unsaved";
@@ -318,6 +322,10 @@ export const useWorkspaceStore = defineStore("workspace", () => {
   }
 
   function scheduleAutoSave() {
+    const projectsStore = useProjectsStore();
+    if (!projectsStore.activeProjectId) {
+      return;
+    }
     if (autoSaveTimer) {
       clearTimeout(autoSaveTimer);
     }
@@ -763,6 +771,40 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     }
   }
 
+  /**
+   * Complete multi-tenant session reset: restores baseline files, purges chat history,
+   * cancels any pending auto-saves and ongoing SSE streaming controllers.
+   */
+  function reset() {
+    if (activeStreamController.value) {
+      activeStreamController.value.abort();
+      activeStreamController.value = null;
+    }
+    if (autoSaveTimer) {
+      clearTimeout(autoSaveTimer);
+      autoSaveTimer = null;
+    }
+    isStreaming.value = false;
+    streamingFilename.value = null;
+    activeStreamingMessageId.value = null;
+    files.value = { ...STARTER_FILES };
+    activeFilename.value = "index.html";
+    openFiles.value = [...DEFAULT_FILES];
+    messages.value = [];
+    refinementSuggestions.value = [...DEFAULT_REFINEMENT_SUGGESTIONS];
+    saveStatus.value = "saved";
+    cursorPosition.value = { line: 1, col: 1 };
+    previewReloadKey.value = 0;
+    activePanel.value = "chat";
+    showChat.value = true;
+    showCode.value = true;
+    showPreview.value = true;
+    previewDevice.value = "desktop";
+    isFileTreeOpen.value = true;
+    isSettingsOpen.value = false;
+    isConnectModalOpen.value = false;
+  }
+
   return {
     activePanel,
     showChat,
@@ -816,5 +858,14 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     scheduleAutoSave,
     previewReloadKey,
     triggerPreviewReload,
+    reset,
   };
+});
+
+registerSessionResetHook(() => {
+  try {
+    useWorkspaceStore().reset();
+  } catch {
+    // Pinia not yet initialized
+  }
 });

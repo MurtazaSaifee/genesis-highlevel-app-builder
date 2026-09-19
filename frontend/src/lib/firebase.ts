@@ -3,6 +3,16 @@ import { getAuth, connectAuthEmulator } from "firebase/auth";
 import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
 import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
 
+if (typeof process !== "undefined" && typeof process.loadEnvFile === "function") {
+  try {
+    process.loadEnvFile(".env.local");
+  } catch (_e) {
+    try {
+      process.loadEnvFile("frontend/.env.local");
+    } catch (_e2) {}
+  }
+}
+
 const env: Record<string, string | undefined> =
   typeof import.meta !== "undefined" && import.meta.env
     ? (import.meta.env as unknown as Record<string, string | undefined>)

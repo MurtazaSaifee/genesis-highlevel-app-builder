@@ -10,13 +10,17 @@ import {
   where,
 } from "firebase/firestore";
 import { db } from "../lib/firebase.ts";
-import { useAuthStore } from "./auth.ts";
+import { useAuthStore, registerSessionResetHook } from "./auth.ts";
 import { useHighLevelStore } from "./highlevel.ts";
 import { useSnapshotsStore } from "./snapshots.ts";
 import { STARTER_FILES } from "./workspace.ts";
 import type { Project, ProjectDraft } from "../types/project.ts";
 
 export const STORAGE_ACTIVE_PROJECT_KEY = "genesis_active_project_id";
+
+export function getUserActiveProjectStorageKey(userId?: string | null): string {
+  return userId ? `genesis_active_project_id_${userId}` : STORAGE_ACTIVE_PROJECT_KEY;
+}
 
 export const useProjectsStore = defineStore("projects", () => {
   const authStore = useAuthStore();
@@ -56,6 +60,8 @@ export const useProjectsStore = defineStore("projects", () => {
 
     loading.value = true;
     error.value = null;
+    projects.value = [];
+    activeProjectId.value = null;
 
     try {
       const q = query(
@@ -95,10 +101,11 @@ export const useProjectsStore = defineStore("projects", () => {
         return [defaultProj];
       }
 
-      // Check if previously stored activeProjectId exists
+      // Check if previously stored activeProjectId exists for this tenant
       let storedId: string | null = null;
       try {
-        storedId = localStorage.getItem(STORAGE_ACTIVE_PROJECT_KEY);
+        const scopedKey = getUserActiveProjectStorageKey(uid);
+        storedId = localStorage.getItem(scopedKey) || localStorage.getItem(STORAGE_ACTIVE_PROJECT_KEY);
       } catch {
         // In-memory or restricted environment
       }
@@ -109,6 +116,8 @@ export const useProjectsStore = defineStore("projects", () => {
       } else if (!activeProjectId.value || !loadedProjects.some((p) => p.id === activeProjectId.value)) {
         activeProjectId.value = loadedProjects[0].id;
         try {
+          const scopedKey = getUserActiveProjectStorageKey(uid);
+          localStorage.setItem(scopedKey, loadedProjects[0].id);
           localStorage.setItem(STORAGE_ACTIVE_PROJECT_KEY, loadedProjects[0].id);
         } catch {
           // ignore
@@ -171,6 +180,8 @@ export const useProjectsStore = defineStore("projects", () => {
       projects.value.unshift(newProject);
       activeProjectId.value = newProject.id;
       try {
+        const scopedKey = getUserActiveProjectStorageKey(uid);
+        localStorage.setItem(scopedKey, newProject.id);
         localStorage.setItem(STORAGE_ACTIVE_PROJECT_KEY, newProject.id);
       } catch {
         // ignore
@@ -229,6 +240,8 @@ export const useProjectsStore = defineStore("projects", () => {
     projects.value = [defaultProject];
     activeProjectId.value = defaultProject.id;
     try {
+      const scopedKey = getUserActiveProjectStorageKey(userId);
+      localStorage.setItem(scopedKey, defaultProject.id);
       localStorage.setItem(STORAGE_ACTIVE_PROJECT_KEY, defaultProject.id);
     } catch {
       // ignore
@@ -341,6 +354,9 @@ export const useProjectsStore = defineStore("projects", () => {
 
     activeProjectId.value = target.id;
     try {
+      const uid = target.userId || authStore.userId;
+      const scopedKey = getUserActiveProjectStorageKey(uid);
+      localStorage.setItem(scopedKey, target.id);
       localStorage.setItem(STORAGE_ACTIVE_PROJECT_KEY, target.id);
     } catch {
       // ignore
@@ -368,17 +384,13 @@ export const useProjectsStore = defineStore("projects", () => {
     if (!target) return false;
 
     const now = Date.now();
-    const payload: Record<string, unknown> = {
-      files,
-      updatedAt: now,
-    };
-    if (lastActiveFilename) {
-      payload.lastActiveFilename = lastActiveFilename;
-    }
-
     try {
       const docRef = doc(db, "projects", projectId);
-      await updateDoc(docRef, payload);
+      await updateDoc(docRef, {
+        files: { ...files },
+        updatedAt: now,
+        ...(lastActiveFilename ? { lastActiveFilename } : {}),
+      });
 
       target.files = { ...files };
       target.updatedAt = now;
@@ -413,6 +425,19 @@ export const useProjectsStore = defineStore("projects", () => {
     editingProject.value = null;
   }
 
+  /**
+   * Complete multi-tenant session reset for projects
+   */
+  function reset() {
+    projects.value = [];
+    activeProjectId.value = null;
+    loading.value = false;
+    error.value = null;
+    isCreateModalOpen.value = false;
+    isEditModalOpen.value = false;
+    editingProject.value = null;
+  }
+
   return {
     projects,
     activeProjectId,
@@ -434,5 +459,14 @@ export const useProjectsStore = defineStore("projects", () => {
     closeCreateModal,
     openEditModal,
     closeEditModal,
+    reset,
   };
+});
+
+registerSessionResetHook(() => {
+  try {
+    useProjectsStore().reset();
+  } catch {
+    // Pinia not yet initialized
+  }
 });

@@ -42,6 +42,43 @@ function mapFirebaseError(error: unknown): string {
   return "An unexpected authentication error occurred.";
 }
 
+export type SessionResetHook = () => void;
+const sessionResetHooks = new Set<SessionResetHook>();
+
+export function registerSessionResetHook(hook: SessionResetHook): () => void {
+  sessionResetHooks.add(hook);
+  return () => {
+    sessionResetHooks.delete(hook);
+  };
+}
+
+export function executeSessionResetHooks(prevUserId?: string | null): void {
+  if (typeof window !== "undefined" && window.localStorage) {
+    try {
+      window.localStorage.removeItem("genesis_active_project_id");
+      if (prevUserId) {
+        window.localStorage.removeItem(`genesis_active_project_id_${prevUserId}`);
+      }
+      for (let i = window.localStorage.length - 1; i >= 0; i--) {
+        const key = window.localStorage.key(i);
+        if (key && key.startsWith("genesis_active_project_id")) {
+          window.localStorage.removeItem(key);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  for (const hook of sessionResetHooks) {
+    try {
+      hook();
+    } catch (err) {
+      console.warn("[AuthStore] Non-fatal error in session reset hook:", err);
+    }
+  }
+}
+
 export const useAuthStore = defineStore("auth", () => {
   const user = ref<User | null>(null);
   const loading = ref<boolean>(false);
@@ -61,6 +98,11 @@ export const useAuthStore = defineStore("auth", () => {
   });
 
   let unsubscribe: (() => void) | null = null;
+  let lastKnownUserId: string | null = null;
+
+  function purgeAllTenantSessionStores(prevUserId?: string | null) {
+    executeSessionResetHooks(prevUserId);
+  }
 
   function initAuth(): Promise<void> {
     if (unsubscribe) {
@@ -71,6 +113,12 @@ export const useAuthStore = defineStore("auth", () => {
     unsubscribe = onAuthStateChanged(
       auth,
       (firebaseUser) => {
+        const newUid = firebaseUser?.uid || null;
+        if (lastKnownUserId !== null && newUid !== lastKnownUserId) {
+          executeSessionResetHooks(lastKnownUserId);
+        }
+        lastKnownUserId = newUid;
+
         user.value = firebaseUser;
         loading.value = false;
         isInitialized.value = true;
@@ -117,8 +165,11 @@ export const useAuthStore = defineStore("auth", () => {
     loading.value = true;
     error.value = null;
     try {
+      const prevUserId = user.value?.uid;
       const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), pass);
       user.value = userCredential.user;
+      lastKnownUserId = userCredential.user.uid;
+      purgeAllTenantSessionStores(prevUserId);
       return userCredential.user;
     } catch (err) {
       const message = mapFirebaseError(err);
@@ -136,8 +187,11 @@ export const useAuthStore = defineStore("auth", () => {
     loading.value = true;
     error.value = null;
     try {
+      const prevUserId = user.value?.uid;
       const userCredential = await signInWithEmailAndPassword(auth, email.trim(), pass);
       user.value = userCredential.user;
+      lastKnownUserId = userCredential.user.uid;
+      purgeAllTenantSessionStores(prevUserId);
       return userCredential.user;
     } catch (err) {
       const message = mapFirebaseError(err);
@@ -152,9 +206,12 @@ export const useAuthStore = defineStore("auth", () => {
     loading.value = true;
     error.value = null;
     try {
+      const prevUserId = user.value?.uid;
       await firebaseSignOut(auth);
       user.value = null;
       activeLocationId.value = null;
+      lastKnownUserId = null;
+      purgeAllTenantSessionStores(prevUserId);
     } catch (err) {
       const message = mapFirebaseError(err);
       error.value = message;
@@ -180,5 +237,6 @@ export const useAuthStore = defineStore("auth", () => {
     signUp,
     signIn,
     signOut,
+    purgeAllTenantSessionStores,
   };
 });

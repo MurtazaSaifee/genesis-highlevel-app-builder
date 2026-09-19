@@ -5,6 +5,7 @@ import { useAuthStore } from "@/stores/auth";
 import { useHighLevelStore } from "@/stores/highlevel";
 import { useProjectsStore } from "@/stores/projects";
 import { useWorkspaceStore } from "@/stores/workspace";
+import { useSnapshotsStore } from "@/stores/snapshots";
 import AppHeader from "@/components/layout/AppHeader.vue";
 import SettingsDialog from "@/components/layout/SettingsDialog.vue";
 import HighLevelConnectModal from "@/components/layout/HighLevelConnectModal.vue";
@@ -18,6 +19,22 @@ const authStore = useAuthStore();
 const hlStore = useHighLevelStore();
 const projectsStore = useProjectsStore();
 const workspaceStore = useWorkspaceStore();
+const snapshotsStore = useSnapshotsStore();
+
+async function loadUserData(userId: string) {
+  workspaceStore.reset();
+  projectsStore.reset();
+  snapshotsStore.reset();
+  hlStore.reset();
+  hlStore.startListening(userId);
+  await projectsStore.fetchProjects(userId);
+  if (projectsStore.activeProject) {
+    workspaceStore.loadProjectFiles(
+      projectsStore.activeProject.files,
+      projectsStore.activeProject.lastActiveFilename
+    );
+  }
+}
 
 onMounted(async () => {
   // Check for OAuth redirect callback query params (?hl_connected=true or ?hl_error=...)
@@ -26,36 +43,38 @@ onMounted(async () => {
   }
 
   if (authStore.userId) {
-    hlStore.startListening(authStore.userId);
-    await projectsStore.fetchProjects(authStore.userId);
-    if (projectsStore.activeProject) {
-      workspaceStore.loadProjectFiles(
-        projectsStore.activeProject.files,
-        projectsStore.activeProject.lastActiveFilename
-      );
-    }
+    await loadUserData(authStore.userId);
+  } else {
+    workspaceStore.reset();
+    projectsStore.reset();
+    snapshotsStore.reset();
+    hlStore.reset();
   }
 });
 
 watch(
   () => authStore.userId,
-  async (newUserId) => {
+  async (newUserId, oldUserId) => {
     if (newUserId) {
-      hlStore.startListening(newUserId);
-      await projectsStore.fetchProjects(newUserId);
-      if (projectsStore.activeProject) {
-        workspaceStore.loadProjectFiles(
-          projectsStore.activeProject.files,
-          projectsStore.activeProject.lastActiveFilename
-        );
+      if (oldUserId && newUserId !== oldUserId) {
+        workspaceStore.reset();
+        projectsStore.reset();
+        snapshotsStore.reset();
+        hlStore.reset();
       }
+      await loadUserData(newUserId);
     } else {
       hlStore.stopListening();
+      workspaceStore.reset();
+      projectsStore.reset();
+      snapshotsStore.reset();
+      hlStore.reset();
     }
   }
 );
 
 function handleProjectCreated(_id: string) {
+  workspaceStore.clearChat();
   if (projectsStore.activeProject) {
     workspaceStore.loadProjectFiles(
       projectsStore.activeProject.files,
@@ -71,6 +90,10 @@ onUnmounted(() => {
 async function handleSignOut() {
   try {
     hlStore.stopListening();
+    hlStore.reset();
+    workspaceStore.reset();
+    projectsStore.reset();
+    snapshotsStore.reset();
     await authStore.signOut();
     router.push("/login");
   } catch (err) {

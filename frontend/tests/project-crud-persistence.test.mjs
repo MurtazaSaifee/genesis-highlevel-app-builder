@@ -1,8 +1,17 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 import { createPinia, setActivePinia } from "pinia";
 import { useProjectsStore, STORAGE_ACTIVE_PROJECT_KEY } from "../src/stores/projects.ts";
 import { useAuthStore } from "../src/stores/auth.ts";
 import { useWorkspaceStore, STARTER_FILES } from "../src/stores/workspace.ts";
+
+try {
+  const envPath = path.resolve(process.cwd(), ".env.local");
+  if (fs.existsSync(envPath)) {
+    process.loadEnvFile(envPath);
+  }
+} catch (_e) {}
 
 console.log("=== Running Task 12 Project CRUD & File Persistence Tests ===");
 
