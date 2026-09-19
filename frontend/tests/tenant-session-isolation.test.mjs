@@ -188,6 +188,56 @@ async function runTests() {
 
   console.log("   ✓ User B starts with completely clean workspace, zero prompts, and default starter files");
 
+  // -------------------------------------------------------------------------
+  // Test Case 4: User A Logs Back In -> Verifying Message & File Hydration
+  // -------------------------------------------------------------------------
+  console.log("\n4. Simulating User A re-login and project hydration with persisted messages...");
+
+  // User B signs out
+  workspaceStore.reset();
+  projectsStore.reset();
+  snapshotsStore.reset();
+  hlStore.reset();
+  authStore.user = null;
+
+  // User A re-authenticates
+  authStore.user = { uid: userAId, email: "user_a@genesis.test" };
+
+  // User A's project has persisted messages
+  const userARehydratedProject = {
+    ...userAProject,
+    messages: [
+      {
+        id: "msg_user_a_prompt",
+        role: "user",
+        content: "Build a custom private CRM for Apex Medical with patient records",
+        timestamp: 1000,
+      },
+      {
+        id: "msg_user_a_assistant",
+        role: "assistant",
+        content: "Here is your custom Apex Medical CRM application.",
+        timestamp: 1100,
+      },
+    ],
+  };
+  projectsStore.projects = [userARehydratedProject];
+  projectsStore.activeProjectId = userARehydratedProject.id;
+
+  // Hydrate workspace with User A's files and persisted messages
+  workspaceStore.loadProjectFiles(
+    userARehydratedProject.files,
+    userARehydratedProject.lastActiveFilename,
+    userARehydratedProject.messages
+  );
+
+  assert.equal(workspaceStore.messages.length, 2, "User A must recover both chat messages upon re-login");
+  assert.equal(workspaceStore.messages[0].content, "Build a custom private CRM for Apex Medical with patient records");
+  assert.equal(workspaceStore.messages[1].content, "Here is your custom Apex Medical CRM application.");
+  assert.ok(workspaceStore.files["index.html"].includes("Apex Medical"), "User A must recover their custom code files");
+  assert.ok(workspaceStore.files["patients.js"] !== undefined, "User A must recover patients.js");
+  console.log("   ✓ User A successfully recovered all persisted messages and project files");
+
   console.log("\n=========================================================");
   console.log("🎉 ALL MULTI-TENANT SESSION ISOLATION TESTS PASSED!");
   console.log("=========================================================\n");

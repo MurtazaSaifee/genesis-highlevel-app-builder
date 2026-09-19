@@ -13,7 +13,7 @@ import { db } from "../lib/firebase.ts";
 import { useAuthStore, registerSessionResetHook } from "./auth.ts";
 import { useHighLevelStore } from "./highlevel.ts";
 import { useSnapshotsStore } from "./snapshots.ts";
-import { STARTER_FILES } from "./workspace.ts";
+import { STARTER_FILES, type ChatMessage } from "./workspace.ts";
 import type { Project, ProjectDraft } from "../types/project.ts";
 
 export const STORAGE_ACTIVE_PROJECT_KEY = "genesis_active_project_id";
@@ -87,6 +87,7 @@ export const useProjectsStore = defineStore("projects", () => {
           createdAt: data.createdAt || Date.now(),
           updatedAt: data.updatedAt || Date.now(),
           lastActiveFilename: data.lastActiveFilename || "index.html",
+          messages: Array.isArray(data.messages) ? data.messages : [],
         });
       });
 
@@ -173,6 +174,7 @@ export const useProjectsStore = defineStore("projects", () => {
         createdAt: now,
         updatedAt: now,
         lastActiveFilename: "index.html",
+        messages: [],
       };
 
       await setDoc(newDocRef, newProject);
@@ -229,6 +231,7 @@ export const useProjectsStore = defineStore("projects", () => {
       createdAt: now,
       updatedAt: now,
       lastActiveFilename: "index.html",
+      messages: [],
     };
 
     try {
@@ -373,12 +376,13 @@ export const useProjectsStore = defineStore("projects", () => {
   }
 
   /**
-   * Save files and active filename to Firestore for a project
+   * Save files, active filename, and chat messages to Firestore for a project
    */
   async function saveProjectFiles(
     projectId: string,
     files: Record<string, string>,
-    lastActiveFilename?: string
+    lastActiveFilename?: string,
+    messages?: ChatMessage[]
   ): Promise<boolean> {
     const target = projects.value.find((p) => p.id === projectId);
     if (!target) return false;
@@ -386,16 +390,26 @@ export const useProjectsStore = defineStore("projects", () => {
     const now = Date.now();
     try {
       const docRef = doc(db, "projects", projectId);
-      await updateDoc(docRef, {
+      const updatePayload: Record<string, unknown> = {
         files: { ...files },
         updatedAt: now,
         ...(lastActiveFilename ? { lastActiveFilename } : {}),
-      });
+      };
+
+      if (messages !== undefined) {
+        // Sanitize messages array to strip undefined properties for Firestore
+        updatePayload.messages = JSON.parse(JSON.stringify(messages));
+      }
+
+      await updateDoc(docRef, updatePayload);
 
       target.files = { ...files };
       target.updatedAt = now;
       if (lastActiveFilename) {
         target.lastActiveFilename = lastActiveFilename;
+      }
+      if (messages !== undefined) {
+        target.messages = [...messages];
       }
       return true;
     } catch (err: unknown) {

@@ -1,3 +1,5 @@
+import type { ChatMessage } from "../stores/workspace.ts";
+
 export interface Project {
   id: string;
   userId: string;
@@ -10,6 +12,7 @@ export interface Project {
   createdAt: number;
   updatedAt: number;
   lastActiveFilename?: string;
+  messages?: ChatMessage[];
 }
 
 export interface ProjectDraft {

@@ -157,13 +157,13 @@ watch(
     }
     if (debounceTimer) clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
-      compileAndRender();
+      workspaceStore.triggerPreviewReload();
     }, 500);
   },
   { deep: true }
 );
 
-// Watch previewReloadKey: forces immediate re-render when triggered (e.g. on generation completion)
+// Watch previewReloadKey: forces immediate re-render when triggered (e.g. on generation completion or project hydration)
 watch(
   () => workspaceStore.previewReloadKey,
   () => {
@@ -171,12 +171,12 @@ watch(
   }
 );
 
-// Watch streaming transition: when LLM finishes streaming, immediately compile
+// Watch streaming transition: when LLM finishes streaming, immediately trigger reload
 watch(
   () => workspaceStore.isStreaming,
   (isStreamingNow, wasStreaming) => {
     if (wasStreaming && !isStreamingNow) {
-      reload();
+      workspaceStore.triggerPreviewReload();
     }
   }
 );
@@ -356,6 +356,7 @@ defineExpose({
     <div class="flex-1 w-full h-full relative overflow-hidden bg-white">
       <iframe
         ref="iframeRef"
+        :key="workspaceStore.previewReloadKey"
         :srcdoc="bundledHtml"
         class="w-full h-full border-0 bg-white"
         sandbox="allow-scripts allow-forms allow-modals allow-popups"

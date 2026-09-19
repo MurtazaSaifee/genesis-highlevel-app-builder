@@ -351,7 +351,8 @@ export const useWorkspaceStore = defineStore("workspace", () => {
       const success = await projectsStore.saveProjectFiles(
         projectsStore.activeProjectId,
         { ...files.value },
-        activeFilename.value
+        activeFilename.value,
+        [...messages.value]
       );
 
       if (success) {
@@ -368,7 +369,11 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     }
   }
 
-  function loadProjectFiles(newFiles: Record<string, string>, targetActiveFilename?: string) {
+  function loadProjectFiles(
+    newFiles: Record<string, string>,
+    targetActiveFilename?: string,
+    initialMessages?: ChatMessage[]
+  ) {
     if (autoSaveTimer) {
       clearTimeout(autoSaveTimer);
       autoSaveTimer = null;
@@ -382,6 +387,11 @@ export const useWorkspaceStore = defineStore("workspace", () => {
       activeFilename.value = "index.html";
     } else if (filenames.length > 0) {
       activeFilename.value = filenames[0];
+    }
+    if (initialMessages && Array.isArray(initialMessages)) {
+      messages.value = [...initialMessages];
+    } else {
+      messages.value = [];
     }
     saveStatus.value = "saved";
     triggerPreviewReload();

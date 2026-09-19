@@ -223,12 +223,15 @@ async function runTests() {
       customFiles
     );
 
-    // Load files into workspace
-    workspaceStore.loadProjectFiles(proj.files, "extra.html");
+    // Load files into workspace with messages
+    const initialMsgs = [{ id: "m1", role: "user", content: "Test msg", timestamp: Date.now() }];
+    workspaceStore.loadProjectFiles(proj.files, "extra.html", initialMsgs);
 
     assert.deepEqual(workspaceStore.files, customFiles);
     assert.equal(workspaceStore.activeFilename, "extra.html");
     assert.ok(workspaceStore.openFiles.includes("extra.html"));
+    assert.equal(workspaceStore.messages.length, 1);
+    assert.equal(workspaceStore.messages[0].content, "Test msg");
     assert.equal(workspaceStore.saveStatus, "saved");
 
     console.log("   ✓ Project files cleanly hydrated into workspace editor and tab state");
@@ -332,6 +335,11 @@ async function runTests() {
       proj.files["app.js"],
       "// Generated CRM app\nwindow.highlevel.contacts.list();"
     );
+    assert.ok(Array.isArray(proj.messages), "Project messages should be an array");
+    assert.equal(proj.messages.length, 2, "User and assistant messages should be persisted to project");
+    assert.equal(proj.messages[0].role, "user");
+    assert.equal(proj.messages[0].content, "Generate a contact list app");
+    assert.equal(proj.messages[1].role, "assistant");
 
     console.log("   ✓ Generated files cleanly persisted to project upon generation completion");
   }

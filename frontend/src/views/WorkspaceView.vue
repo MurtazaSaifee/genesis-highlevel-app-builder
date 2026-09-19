@@ -31,7 +31,8 @@ async function loadUserData(userId: string) {
   if (projectsStore.activeProject) {
     workspaceStore.loadProjectFiles(
       projectsStore.activeProject.files,
-      projectsStore.activeProject.lastActiveFilename
+      projectsStore.activeProject.lastActiveFilename,
+      projectsStore.activeProject.messages
     );
   }
 }
@@ -78,7 +79,8 @@ function handleProjectCreated(_id: string) {
   if (projectsStore.activeProject) {
     workspaceStore.loadProjectFiles(
       projectsStore.activeProject.files,
-      projectsStore.activeProject.lastActiveFilename
+      projectsStore.activeProject.lastActiveFilename,
+      projectsStore.activeProject.messages
     );
   }
 }

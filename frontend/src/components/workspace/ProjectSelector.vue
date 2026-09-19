@@ -36,7 +36,7 @@ async function handleSelectProject(proj: Project) {
   }
   workspaceStore.clearChat();
   await projectsStore.selectProject(proj.id);
-  workspaceStore.loadProjectFiles(proj.files, proj.lastActiveFilename);
+  workspaceStore.loadProjectFiles(proj.files, proj.lastActiveFilename, proj.messages);
   closeDropdown();
 }
 
@@ -59,7 +59,8 @@ async function handleDeleteProject(proj: Project, e: Event) {
     if (wasActive && projectsStore.activeProject) {
       workspaceStore.loadProjectFiles(
         projectsStore.activeProject.files,
-        projectsStore.activeProject.lastActiveFilename
+        projectsStore.activeProject.lastActiveFilename,
+        projectsStore.activeProject.messages
       );
     }
   }
