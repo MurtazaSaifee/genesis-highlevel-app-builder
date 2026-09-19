@@ -9,6 +9,7 @@ import AppHeader from "@/components/layout/AppHeader.vue";
 import SettingsDialog from "@/components/layout/SettingsDialog.vue";
 import HighLevelConnectModal from "@/components/layout/HighLevelConnectModal.vue";
 import ProjectModal from "@/components/workspace/ProjectModal.vue";
+import SnapshotSheet from "@/components/workspace/SnapshotSheet.vue";
 import WorkspaceLayout from "@/components/workspace/WorkspaceLayout.vue";
 import { CheckCircle2, AlertCircle, X } from "lucide-vue-next";
 
@@ -143,5 +144,8 @@ function handleOpenExternalPreview() {
       mode="edit"
       @update:open="(val) => (projectsStore.isEditModalOpen = val)"
     />
+
+    <!-- Version Control & Snapshot Sheet -->
+    <SnapshotSheet />
   </div>
 </template>

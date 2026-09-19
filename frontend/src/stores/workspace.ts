@@ -2,6 +2,7 @@ import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import { useSettingsStore } from "./settings.ts";
 import { useProjectsStore } from "./projects.ts";
+import { useSnapshotsStore } from "./snapshots.ts";
 import type { SaveStatus } from "../types/project.ts";
 import {
   streamGenerateApp,
@@ -675,7 +676,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
               }
             }
           },
-          onDone: (evt) => {
+          onDone: async (evt) => {
             const durationMs = Date.now() - startTime;
             const target = messages.value.find((m) => m.id === assistantMsgId);
             if (target) {
@@ -705,6 +706,22 @@ export const useWorkspaceStore = defineStore("workspace", () => {
             activeStreamingMessageId.value = null;
             triggerPreviewReload();
             forceSaveNow();
+
+            // Automatically snapshot project files after every generation
+            try {
+              const snapshotsStore = useSnapshotsStore();
+              if (activeProjectId) {
+                await snapshotsStore.createSnapshot(activeProjectId, {
+                  trigger: "generation",
+                  description: trimmed.length > 80 ? `${trimmed.slice(0, 80)}...` : trimmed,
+                  prompt: trimmed,
+                  files: { ...files.value },
+                  messageId: assistantMsgId,
+                });
+              }
+            } catch (snapErr) {
+              console.warn("[WorkspaceStore] Non-fatal snapshot error on generation:", snapErr);
+            }
           },
           onError: (evt) => {
             const target = messages.value.find((m) => m.id === assistantMsgId);

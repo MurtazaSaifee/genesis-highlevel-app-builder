@@ -2,6 +2,7 @@
 import { useAuthStore } from "@/stores/auth";
 import { useHighLevelStore } from "@/stores/highlevel";
 import { useSettingsStore } from "@/stores/settings";
+import { useSnapshotsStore } from "@/stores/snapshots";
 import { useWorkspaceStore, type WorkspacePanel } from "@/stores/workspace";
 import Button from "@/components/ui/Button.vue";
 import ProjectSelector from "@/components/workspace/ProjectSelector.vue";
@@ -16,12 +17,14 @@ import {
   Play,
   FlaskConical,
   Unplug,
+  History,
 } from "lucide-vue-next";
 
 const authStore = useAuthStore();
 const hlStore = useHighLevelStore();
 const settingsStore = useSettingsStore();
 const workspaceStore = useWorkspaceStore();
+const snapshotsStore = useSnapshotsStore();
 
 const emit = defineEmits<{
   (e: "signOut"): void;
@@ -57,6 +60,28 @@ function handlePanelClick(panel: WorkspacePanel) {
 
       <!-- Project Selector -->
       <ProjectSelector />
+
+      <!-- Version History Trigger -->
+      <button
+        type="button"
+        @click="snapshotsStore.toggleSheet"
+        :class="[
+          'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all cursor-pointer shadow-2xs',
+          snapshotsStore.isSheetOpen
+            ? 'bg-primary text-primary-foreground border-primary'
+            : 'border-border bg-card/80 hover:bg-muted/80 text-foreground',
+        ]"
+        title="View version history & snapshots"
+      >
+        <History class="h-3.5 w-3.5 text-muted-foreground" />
+        <span class="hidden md:inline">History</span>
+        <span
+          v-if="snapshotsStore.snapshotCount > 0"
+          class="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-medium bg-muted text-foreground border border-border/60"
+        >
+          {{ snapshotsStore.snapshotCount }}
+        </span>
+      </button>
     </div>
 
     <!-- Center: Mobile/Tablet Responsive Tab Switcher (<1024px) -->

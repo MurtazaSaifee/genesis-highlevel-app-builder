@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from "vue";
 import { useWorkspaceStore } from "@/stores/workspace";
+import { useSnapshotsStore } from "@/stores/snapshots";
 import MonacoEditor from "./MonacoEditor.vue";
 import FileTree from "./FileTree.vue";
 import {
@@ -18,9 +19,11 @@ import {
   Save,
   CheckCheck,
   AlertCircle,
+  History,
 } from "lucide-vue-next";
 
 const workspaceStore = useWorkspaceStore();
+const snapshotsStore = useSnapshotsStore();
 
 const copied = ref(false);
 
@@ -143,6 +146,23 @@ function handleCloseTab(filename: string, event: MouseEvent) {
 
       <!-- Right Actions in Editor Header -->
       <div class="flex items-center gap-1 shrink-0 ml-2">
+        <!-- History / Snapshots Trigger -->
+        <button
+          type="button"
+          @click="snapshotsStore.toggleSheet"
+          class="h-7 px-2 rounded-md text-xs text-muted-foreground hover:text-foreground hover:bg-muted flex items-center gap-1.5 transition-colors cursor-pointer"
+          title="Open Version History & Snapshots"
+        >
+          <History class="h-3.5 w-3.5 text-muted-foreground" />
+          <span class="hidden xl:inline text-[11px]">History</span>
+          <span
+            v-if="snapshotsStore.snapshotCount > 0"
+            class="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-medium bg-muted-foreground/15 text-foreground"
+          >
+            {{ snapshotsStore.snapshotCount }}
+          </span>
+        </button>
+
         <button
           type="button"
           @click="workspaceStore.forceSaveNow"

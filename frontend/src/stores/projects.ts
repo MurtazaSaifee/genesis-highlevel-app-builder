@@ -12,6 +12,7 @@ import {
 import { db } from "../lib/firebase.ts";
 import { useAuthStore } from "./auth.ts";
 import { useHighLevelStore } from "./highlevel.ts";
+import { useSnapshotsStore } from "./snapshots.ts";
 import { STARTER_FILES } from "./workspace.ts";
 import type { Project, ProjectDraft } from "../types/project.ts";
 
@@ -175,6 +176,18 @@ export const useProjectsStore = defineStore("projects", () => {
         // ignore
       }
 
+      // Record initial checkpoint snapshot
+      try {
+        const snapshotsStore = useSnapshotsStore();
+        await snapshotsStore.createSnapshot(newProject.id, {
+          trigger: "manual",
+          description: "Initial project creation",
+          files: newProject.files,
+        });
+      } catch (snapErr) {
+        console.warn("[ProjectsStore] Non-fatal snapshot error on project creation:", snapErr);
+      }
+
       return newProject;
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -219,6 +232,18 @@ export const useProjectsStore = defineStore("projects", () => {
       localStorage.setItem(STORAGE_ACTIVE_PROJECT_KEY, defaultProject.id);
     } catch {
       // ignore
+    }
+
+    // Record initial checkpoint snapshot for default project
+    try {
+      const snapshotsStore = useSnapshotsStore();
+      await snapshotsStore.createSnapshot(defaultProject.id, {
+        trigger: "manual",
+        description: "Initial project creation",
+        files: defaultProject.files,
+      });
+    } catch (snapErr) {
+      console.warn("[ProjectsStore] Non-fatal snapshot error on default project creation:", snapErr);
     }
 
     return defaultProject;
@@ -317,6 +342,13 @@ export const useProjectsStore = defineStore("projects", () => {
     activeProjectId.value = target.id;
     try {
       localStorage.setItem(STORAGE_ACTIVE_PROJECT_KEY, target.id);
+    } catch {
+      // ignore
+    }
+
+    try {
+      const snapshotsStore = useSnapshotsStore();
+      snapshotsStore.fetchSnapshots(target.id);
     } catch {
       // ignore
     }
