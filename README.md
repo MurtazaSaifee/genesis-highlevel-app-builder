@@ -13,25 +13,24 @@
 
 ## Table of Contents
 
-1. [Live Deliverables & Links](#1-live-deliverables--links)
+1. [Deliverables & Links](#1-deliverables--links)
 2. [Key Capabilities & Assignment Rubric](#2-key-capabilities--assignment-rubric)
 3. [Architecture Overview](#3-architecture-overview)
-4. [Quickstart: Local Development (100% Free, Zero Cloud Spend)](#4-quickstart-local-development-100-free-zero-cloud-spend)
+4. [Quickstart: Local Development](#4-quickstart-local-development)
 5. [HighLevel Marketplace App & OAuth Configuration](#5-highlevel-marketplace-app--oauth-configuration)
-6. [1-Click Reviewer Sandbox Mode](#6-1-click-reviewer-sandbox-mode)
-7. [Cloud Deployment Guide](#7-cloud-deployment-guide)
+6. [Reviewer Sandbox Mode](#6-reviewer-sandbox-mode)
+7. [Deployment Guide](#7-deployment-guide)
 8. [10 Architectural Decisions & Tradeoffs](#8-10-architectural-decisions--tradeoffs)
 9. [5 Future Enhancements](#9-5-future-enhancements)
 10. [Video Walkthrough](#10-video-walkthrough)
 
 ---
 
-## 1. Live Deliverables & Links
+## 1. Deliverables & Links
 
-* **Live Deployed Frontend (Firebase Hosting):** [https://genesis-hl-builder-1.web.app](https://genesis-hl-builder-1.web.app)
-* **Cloud Functions Base URL (Emulator):** `http://127.0.0.1:5001/genesis-hl-builder-1/us-central1`
-* **Production Functions Gateway:** `https://us-central1-genesis-hl-builder-1.cloudfunctions.net`
-* **Loom Video Walkthrough:** [Watch 5-Minute Video Walkthrough](https://www.loom.com/share/7bbc27d0e1b24a2b920b3378d675484e)
+* **Live Frontend:** [https://genesis-hl-builder-1.web.app](https://genesis-hl-builder-1.web.app)
+* **Cloud Functions Base URL:** `https://us-central1-genesis-hl-builder-1.cloudfunctions.net`
+* **Video Walkthrough:** [Watch 5-Minute Video Walkthrough](https://www.loom.com/share/7bbc27d0e1b24a2b920b3378d675484e)
 
 ---
 
@@ -105,9 +104,9 @@ flowchart TB
 
 ---
 
-## 4. Quickstart: Local Development (100% Free, Zero Cloud Spend)
+## 4. Quickstart: Local Development
 
-The application is built to run entirely offline on your machine using the **Firebase Local Emulator Suite** and the free tier of **Google AI Studio** or **OpenAI**.
+The application is built to run using the **Firebase Local Emulator Suite** and **Google AI Studio** or **OpenAI**.
 
 ### Prerequisites
 * **Node.js**: v18.0.0 or higher (`node -v`)
@@ -136,7 +135,7 @@ cd frontend && npm install && cd ..
    ```bash
    cp functions/.env.example functions/.env.local
    ```
-   Add your free-tier Google AI Studio Gemini API key:
+   Add your Google AI Studio Gemini API key:
    ```env
    LLM_API_KEY=your-google-ai-studio-key
    LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
@@ -210,21 +209,20 @@ To connect live HighLevel accounts using OAuth 2.0:
 
 ---
 
-## 6. 1-Click Reviewer Sandbox Mode
+## 6. Reviewer Sandbox Mode
 
-To allow assignment evaluators to test without requiring an active HighLevel developer account or OAuth credentials, Genesis includes a **1-Click Reviewer Sandbox**:
+To allow assignment evaluators to test without requiring an active HighLevel developer account or OAuth credentials, Genesis includes a **Reviewer Sandbox Mode**:
 
 1. Click the **"Connect HighLevel"** button in the header.
 2. In the modal, click the green button: **"Connect Demo Sandbox Location"**.
 3. Genesis binds location `sandbox-location-genesis` to your session in Firestore.
-4. When generated apps query `window.highlevel.contacts.list()` or `window.highlevel.calendars.getAppointments()`, the sandboxed RPC bridge dynamically routes to realistic HighLevel CRM entities (*John Doe, Sarah Connor, Michael Scott, Alex Morgan, Emily Chen* and upcoming confirmed appointments).
+4. When generated apps query `window.highlevel.contacts.list()` or `window.highlevel.calendars.getAppointments()`, the sandboxed RPC bridge dynamically routes to HighLevel CRM entities (*John Doe, Sarah Connor, Michael Scott, Alex Morgan, Emily Chen* and upcoming confirmed appointments).
 
 ---
 
-## 7. Cloud Deployment Guide
+## 7. Deployment Guide
 
 ### Deploying the Frontend (Firebase Hosting)
-Firebase Hosting is 100% free and requires no paid plan:
 ```bash
 # Build production bundle
 npm --prefix frontend run build
@@ -240,7 +238,6 @@ firebase deploy --only firestore:rules
 ```
 
 ### Deploying Cloud Functions
-> **Note on Firebase Blaze Plan**: Google Cloud requires the Blaze (Pay-as-you-go) plan to deploy Cloud Functions 2nd Gen due to underlying Cloud Build / Artifact Registry containerization. Blaze includes **2,000,000 invocations per month for $0.00**.
 ```bash
 firebase deploy --only functions
 ```
@@ -252,10 +249,10 @@ firebase deploy --only functions
 1. **Server-Sent Events (SSE) over WebSockets**:
    * *Decision:* Unidirectional HTTP streaming via `/streamGenerate`.
    * *Tradeoff:* WebSockets are bidirectional and stateful, introducing connection scaling overhead on serverless Cloud Functions. SSE runs over standard HTTP, natively supports auto-reconnection, works through corporate proxies, and terminates cleanly upon completion.
-2. **`gemini-3.1-flash-lite` as Default Free-Tier LLM**:
+2. **`gemini-3.1-flash-lite` as Default LLM**:
    * *Decision:* Standardized on Gemini 3.1 Flash-Lite with BYOK OpenAI fallback.
-   * *Tradeoff:* Larger models like `gemini-3.8-flash` hit free-tier capacity limits (HTTP 503) when streaming multi-file code responses. `gemini-3.1-flash-lite` streams ~100 tokens/sec, generates full 3-file bundles in 14 seconds, and produces zero rate-limit errors on free keys.
-3. **Dual-Channel HighLevel Connectivity (OAuth 2.0 + 1-Click Sandbox)**:
+   * *Tradeoff:* Larger models like `gemini-3.8-flash` hit capacity limits (HTTP 503) when streaming multi-file code responses. `gemini-3.1-flash-lite` streams ~100 tokens/sec, generates full 3-file bundles in 14 seconds, and produces zero rate-limit errors.
+3. **Dual-Channel HighLevel Connectivity (OAuth 2.0 + Sandbox)**:
    * *Decision:* Built full OAuth 2.0 code exchange alongside a 1-click sandbox mock provider.
    * *Tradeoff:* Requires maintaining sandbox fixtures, but eliminates reviewer onboarding friction so anyone can evaluate the app instantly without external developer portal access.
 4. **Sandboxed Iframe Preview with Typed postMessage RPC**:
