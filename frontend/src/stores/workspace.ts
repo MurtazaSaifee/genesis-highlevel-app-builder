@@ -429,16 +429,24 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     if (isStreaming.value) return false;
 
     if (files.value[filename] === undefined) return false;
-    // Don't allow deleting all files
-    if (Object.keys(files.value).length <= 1) return false;
 
     delete files.value[filename];
-    closeTab(filename);
+
+    // Remove from open tabs unconditionally
+    const tabIdx = openFiles.value.indexOf(filename);
+    if (tabIdx !== -1) {
+      openFiles.value.splice(tabIdx, 1);
+    }
 
     if (activeFilename.value === filename) {
       const remaining = Object.keys(files.value);
       if (remaining.length > 0) {
-        activeFilename.value = remaining[0];
+        activeFilename.value = openFiles.value[0] || remaining[0];
+        if (!openFiles.value.includes(activeFilename.value)) {
+          openFiles.value.push(activeFilename.value);
+        }
+      } else {
+        activeFilename.value = "";
       }
     }
     forceSaveNow();
@@ -699,8 +707,11 @@ export const useWorkspaceStore = defineStore("workspace", () => {
             const target = messages.value.find((m) => m.id === assistantMsgId);
             if (target) {
               target.status = "complete";
-              if (evt.conversationText && !target.content) {
+              if (evt.conversationText) {
                 target.content = evt.conversationText;
+              } else if (!target.content || target.content.includes("<<<FILE")) {
+                const count = evt.stats?.filesCount || Object.keys(evt.files || {}).length || target.filesModified?.length || 0;
+                target.content = `I've generated ${count} application files for your HighLevel app. You can review the code in the Monaco editor and test the interactive app in the live preview.`;
               }
               if (evt.files) {
                 for (const [fn, content] of Object.entries(evt.files)) {

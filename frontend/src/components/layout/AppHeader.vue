@@ -194,7 +194,7 @@ function handlePanelClick(panel: WorkspacePanel) {
         <template v-if="hlStore.isConnected">
           <FlaskConical v-if="hlStore.isSandbox" class="h-3 w-3 text-amber-500 animate-pulse" />
           <Radio v-else class="h-3 w-3 text-blue-500 animate-pulse" />
-          <span class="font-mono text-[11px] truncate max-w-[110px]">
+          <span class="font-mono text-[11px] truncate max-w-[160px] md:max-w-xs">
             {{ hlStore.isSandbox ? 'Sandbox' : 'HL' }}: {{ hlStore.locationId }}
           </span>
         </template>

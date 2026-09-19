@@ -92,15 +92,17 @@ async function runTests() {
     assert.ok(!store.openFiles.includes("components.js"));
     assert.ok(store.activeFilename !== "components.js");
 
-    // Guard against deleting all files
+    // Deleting files down to 0
     store.deleteFile("style.css");
     store.deleteFile("app.js");
     assert.equal(store.allFilenames.length, 1);
     const deletedLast = store.deleteFile("index.html");
-    assert.equal(deletedLast, false, "Must not delete the last remaining file in project");
-    assert.equal(store.allFilenames.length, 1);
+    assert.equal(deletedLast, true, "Must allow deleting the last remaining file in project");
+    assert.equal(store.allFilenames.length, 0);
+    assert.equal(store.activeFilename, "");
+    assert.deepEqual(store.openFiles, []);
 
-    console.log("   ✓ File creation, deletion, and tree boundaries enforced");
+    console.log("   ✓ File creation, deletion down to empty project, and tree boundaries enforced");
   }
 
   // Test Suite 4: Multi-Tab Navigation & Boundaries

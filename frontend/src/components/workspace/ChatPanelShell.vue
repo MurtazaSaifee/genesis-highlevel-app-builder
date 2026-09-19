@@ -173,6 +173,15 @@ function getFileBadgeColor(filename: string) {
   if (lower.endsWith(".json")) return "text-emerald-400";
   return "text-slate-400";
 }
+
+function formatAssistantContent(content: string): string {
+  if (!content) return "";
+  const fileDelimiterIdx = content.indexOf("<<<FILE");
+  if (fileDelimiterIdx !== -1) {
+    return content.substring(0, fileDelimiterIdx).trim();
+  }
+  return content;
+}
 </script>
 
 <template>
@@ -218,7 +227,7 @@ function getFileBadgeColor(filename: string) {
     </div>
 
     <!-- Scrollable Messages Area -->
-    <div ref="messagesContainerRef" class="flex-1 overflow-y-auto p-3.5 space-y-4 select-text">
+    <div ref="messagesContainerRef" class="flex-1 overflow-y-auto overflow-x-hidden p-3.5 space-y-4 select-text min-w-0">
       <slot name="messages">
         <!-- Empty Starter State / Welcome Screen -->
         <div v-if="workspaceStore.messages.length === 0" class="space-y-4 pt-1">
@@ -273,13 +282,13 @@ function getFileBadgeColor(filename: string) {
                 <span>•</span>
                 <span>{{ formatTime(msg.timestamp) }}</span>
               </div>
-              <div class="max-w-[88%] rounded-2xl rounded-tr-xs bg-primary text-primary-foreground px-3.5 py-2.5 text-xs shadow-2xs whitespace-pre-wrap leading-relaxed">
+              <div class="max-w-[88%] rounded-2xl rounded-tr-xs bg-primary text-primary-foreground px-3.5 py-2.5 text-xs shadow-2xs whitespace-pre-wrap break-words leading-relaxed">
                 {{ msg.content }}
               </div>
             </div>
 
             <!-- Assistant Message Card -->
-            <div v-else-if="msg.role === 'assistant'" class="flex flex-col items-start space-y-1.5">
+            <div v-else-if="msg.role === 'assistant'" class="flex flex-col items-start space-y-1.5 min-w-0 w-full">
               <div class="flex items-center gap-1.5 text-[10px] text-muted-foreground ml-1">
                 <Bot class="h-3.5 w-3.5 text-primary" />
                 <span class="font-semibold text-foreground">Genesis AI</span>
@@ -291,10 +300,10 @@ function getFileBadgeColor(filename: string) {
                 </span>
               </div>
 
-              <div class="w-full rounded-2xl rounded-tl-xs border border-border bg-card p-3.5 text-xs space-y-3 shadow-2xs">
+              <div class="w-full min-w-0 rounded-2xl rounded-tl-xs border border-border bg-card p-3.5 text-xs space-y-3 shadow-2xs overflow-hidden">
                 <!-- Text / Commentary Content -->
-                <div v-if="msg.content" class="text-foreground leading-relaxed whitespace-pre-wrap">
-                  <span>{{ msg.content }}</span>
+                <div v-if="formatAssistantContent(msg.content)" class="text-foreground leading-relaxed whitespace-pre-wrap break-words min-w-0">
+                  <span>{{ formatAssistantContent(msg.content) }}</span>
                   <span
                     v-if="msg.status === 'streaming'"
                     class="inline-block w-1.5 h-3.5 bg-primary animate-pulse ml-0.5 align-middle"
@@ -415,15 +424,15 @@ function getFileBadgeColor(filename: string) {
 
             <div class="flex items-center justify-between p-2 pt-0">
               <!-- Left Status Hint -->
-              <div class="flex items-center gap-1 text-[10px] text-muted-foreground">
-                <span v-if="workspaceStore.isStreaming" class="text-amber-500 flex items-center gap-1 font-medium animate-pulse">
-                  <Loader2 class="h-2.5 w-2.5 animate-spin" />
+              <div class="flex items-center gap-1 text-[10px] text-muted-foreground min-w-0 truncate mr-2">
+                <span v-if="workspaceStore.isStreaming" class="text-amber-500 flex items-center gap-1 font-medium animate-pulse truncate">
+                  <Loader2 class="h-2.5 w-2.5 animate-spin shrink-0" />
                   <span>Esc to stop</span>
                 </span>
-                <span v-else class="hidden sm:inline flex items-center gap-0.5">
+                <span v-else class="hidden sm:inline-flex items-center gap-0.5 truncate text-[10px]">
                   <span>Enter</span>
-                  <CornerDownLeft class="h-2.5 w-2.5 inline" />
-                  <span>to send · Shift+Enter for newline</span>
+                  <CornerDownLeft class="h-2.5 w-2.5 inline shrink-0" />
+                  <span>to send · Shift+Enter newline</span>
                 </span>
               </div>
 

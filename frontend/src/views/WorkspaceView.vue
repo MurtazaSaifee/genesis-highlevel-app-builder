@@ -117,29 +117,29 @@ function handleOpenExternalPreview() {
 </script>
 
 <template>
-  <div class="h-screen w-screen flex flex-col overflow-hidden bg-background">
+  <div class="h-screen w-full flex flex-col overflow-hidden bg-background">
     <!-- Top Navigation Header -->
     <AppHeader @signOut="handleSignOut" />
 
-    <!-- Toast Notification Banner for HighLevel OAuth / Errors -->
+    <!-- Toast Notification Banner for HighLevel OAuth / Errors (Positioned above footer bar) -->
     <div
       v-if="hlStore.successNotification"
-      class="fixed bottom-4 right-4 z-50 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs flex items-center gap-2 shadow-lg animate-in slide-in-from-bottom-2"
+      class="fixed bottom-10 right-4 z-50 p-3 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs flex items-center gap-2 shadow-xl backdrop-blur-xs animate-in slide-in-from-bottom-2"
     >
       <CheckCircle2 class="h-4 w-4 shrink-0 text-emerald-500" />
       <span>{{ hlStore.successNotification }}</span>
-      <button @click="hlStore.clearNotifications" class="ml-2 text-muted-foreground hover:text-foreground">
+      <button @click="hlStore.clearNotifications" class="ml-2 text-muted-foreground hover:text-foreground cursor-pointer">
         <X class="h-3.5 w-3.5" />
       </button>
     </div>
 
     <div
       v-if="hlStore.error"
-      class="fixed bottom-4 right-4 z-50 p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-xs flex items-center gap-2 shadow-lg animate-in slide-in-from-bottom-2"
+      class="fixed bottom-10 right-4 z-50 p-3 rounded-lg bg-destructive/15 border border-destructive/30 text-destructive text-xs flex items-center gap-2 shadow-xl backdrop-blur-xs animate-in slide-in-from-bottom-2"
     >
       <AlertCircle class="h-4 w-4 shrink-0 text-destructive" />
       <span>{{ hlStore.error }}</span>
-      <button @click="hlStore.clearNotifications" class="ml-2 text-muted-foreground hover:text-foreground">
+      <button @click="hlStore.clearNotifications" class="ml-2 text-muted-foreground hover:text-foreground cursor-pointer">
         <X class="h-3.5 w-3.5" />
       </button>
     </div>

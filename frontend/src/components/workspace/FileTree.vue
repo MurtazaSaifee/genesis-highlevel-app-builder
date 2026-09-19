@@ -103,8 +103,11 @@ function submitNewFile() {
 function handleDelete(filename: string, event: MouseEvent) {
   event.stopPropagation();
   if (workspaceStore.isStreaming) return;
-  if (workspaceStore.allFilenames.length <= 1) return;
-  const confirmed = window.confirm(`Delete "${filename}"? This action cannot be undone.`);
+  const isLast = workspaceStore.allFilenames.length <= 1;
+  const message = isLast
+    ? `Delete "${filename}"? This will leave the project with no files.`
+    : `Delete "${filename}"? This action cannot be undone.`;
+  const confirmed = window.confirm(message);
   if (confirmed) {
     workspaceStore.deleteFile(filename);
   }
@@ -216,9 +219,9 @@ const fileList = computed(() => workspaceStore.allFilenames);
             {{ getLineCount(filename) }}L
           </span>
 
-          <!-- Delete file button (shown on hover, disabled if only 1 file or streaming) -->
+          <!-- Delete file button (shown on hover, disabled if streaming) -->
           <button
-            v-if="fileList.length > 1 && !workspaceStore.isStreaming"
+            v-if="!workspaceStore.isStreaming"
             type="button"
             @click="handleDelete(filename, $event)"
             class="hidden group-hover:flex h-5 w-5 rounded items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"

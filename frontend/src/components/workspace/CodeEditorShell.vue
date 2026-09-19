@@ -23,6 +23,7 @@ import {
   History,
   Code,
   GitCompare,
+  Plus,
 } from "lucide-vue-next";
 
 const workspaceStore = useWorkspaceStore();
@@ -30,6 +31,13 @@ const snapshotsStore = useSnapshotsStore();
 
 const viewMode = ref<"code" | "diff">("code");
 const copied = ref(false);
+
+function handleCreateStarterFile() {
+  workspaceStore.createFile(
+    "index.html",
+    `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <title>Genesis App</title>\n</head>\n<body>\n  <div id="app"></div>\n</body>\n</html>`
+  );
+}
 
 // Auto-switch to code mode when streaming begins so user sees real-time generation
 watch(
@@ -251,7 +259,27 @@ function handleCloseTab(filename: string, event: MouseEvent) {
 
       <!-- Monaco Code Editor Viewport -->
       <div class="flex-1 h-full min-w-0 bg-[#1e1e1e] overflow-hidden relative">
-        <slot name="editor">
+        <div
+          v-if="workspaceStore.allFilenames.length === 0"
+          class="h-full w-full flex flex-col items-center justify-center p-6 text-center select-none bg-[#1e1e1e]"
+        >
+          <div class="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
+            <FileCode class="h-6 w-6 text-primary" />
+          </div>
+          <h3 class="text-sm font-semibold text-foreground mb-1">No files in project</h3>
+          <p class="text-xs text-muted-foreground max-w-sm mb-4 leading-relaxed">
+            All files have been removed. Create a new file or ask Genesis AI in the chat to generate your HighLevel application.
+          </p>
+          <button
+            type="button"
+            @click="handleCreateStarterFile"
+            class="px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+          >
+            <Plus class="h-3.5 w-3.5" />
+            <span>Create index.html</span>
+          </button>
+        </div>
+        <slot v-else name="editor">
           <DiffEditor v-if="viewMode === 'diff'" />
           <MonacoEditor v-else />
         </slot>
@@ -292,11 +320,12 @@ function handleCloseTab(filename: string, event: MouseEvent) {
         >
           Diff Mode
         </span>
-        <span class="text-primary font-medium">{{ workspaceStore.activeFilename }}</span>
-        <span class="uppercase text-[10px] px-1 py-0.2 rounded bg-muted font-sans font-semibold">
+        <span v-if="workspaceStore.activeFilename" class="text-primary font-medium">{{ workspaceStore.activeFilename }}</span>
+        <span v-else class="text-muted-foreground/60 italic text-[11px]">No file selected</span>
+        <span v-if="workspaceStore.activeFilename" class="uppercase text-[10px] px-1 py-0.2 rounded bg-muted font-sans font-semibold">
           {{ workspaceStore.activeLanguage }}
         </span>
-        <span>Ln {{ workspaceStore.cursorPosition.line }}, Col {{ workspaceStore.cursorPosition.col }}</span>
+        <span v-if="workspaceStore.activeFilename">Ln {{ workspaceStore.cursorPosition.line }}, Col {{ workspaceStore.cursorPosition.col }}</span>
       </div>
     </div>
   </div>
