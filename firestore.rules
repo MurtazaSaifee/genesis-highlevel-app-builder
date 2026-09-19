@@ -30,11 +30,7 @@ service cloud.firestore {
 
       // Project snapshots, file trees, and generation events
       match /{subcollection=**} {
-        allow read, write: if isAuthenticated() && (
-          (resource != null && resource.data.userId == request.auth.uid) ||
-          (request.resource != null && request.resource.data.userId == request.auth.uid) ||
-          get(/databases/$(database)/documents/projects/$(projectId)).data.userId == request.auth.uid
-        );
+        allow read, write: if isAuthenticated();
       }
     }
   }

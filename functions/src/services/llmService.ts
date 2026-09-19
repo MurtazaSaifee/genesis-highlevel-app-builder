@@ -39,7 +39,7 @@ export interface CreateChatOptions {
 }
 
 export const DEFAULT_LLM_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/";
-export const DEFAULT_LLM_MODEL = "gemini-2.0-flash";
+export const DEFAULT_LLM_MODEL = "gemini-3.1-flash-lite";
 export const DEFAULT_TEMPERATURE = 0.2;
 
 export class LLMConfigurationError extends Error {
@@ -187,7 +187,7 @@ export async function streamChatCompletion(
         })),
         stream: true,
         temperature: temperature !== undefined ? temperature : resolved.defaultTemperature,
-        max_tokens: maxTokens,
+        max_tokens: maxTokens || 8192,
       },
       { signal }
     );
@@ -216,7 +216,7 @@ export async function createChatCompletion(options: CreateChatOptions): Promise<
         })),
         stream: false,
         temperature: temperature !== undefined ? temperature : resolved.defaultTemperature,
-        max_tokens: maxTokens,
+        max_tokens: maxTokens || 8192,
       },
       { signal }
     );

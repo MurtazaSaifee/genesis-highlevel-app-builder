@@ -15,6 +15,14 @@ globalThis.localStorage = {
   clear: () => memoryStorage.clear(),
 };
 
+async function ensureAuthenticated(authStore) {
+  try {
+    await authStore.signUp(`evaluator_${Date.now()}_${Math.random().toString(36).slice(2, 6)}@genesis.app`, "GenesisPass123!");
+  } catch (_e) {
+    authStore.user = { uid: "usr_evaluator_789", email: "evaluator@genesis.app" };
+  }
+}
+
 async function runTests() {
   // Test Suite 1: Initial Store State
   console.log("\n1. Testing Projects Store Initial State...");
@@ -48,8 +56,8 @@ async function runTests() {
     assert.equal(failedUnauth, null);
     assert.match(projectsStore.error, /authenticated/i);
 
-    // Mock authenticated user
-    authStore.user = { uid: "usr_evaluator_789", email: "evaluator@genesis.app" };
+    // Authenticated user
+    await ensureAuthenticated(authStore);
 
     // Rejection when name is empty
     const failedEmpty = await projectsStore.createProject({ name: "   " });
@@ -68,7 +76,7 @@ async function runTests() {
     assert.equal(created.name, "Lead Ingestion Dashboard");
     assert.equal(created.description, "Automates CRM lead capture and appointment bookings");
     assert.equal(created.locationId, "loc_hl_sandbox_001");
-    assert.equal(created.userId, "usr_evaluator_789");
+    assert.equal(created.userId, authStore.userId);
     assert.equal(created.isDeleted, false);
     assert.equal(created.deletedAt, null);
     assert.deepEqual(created.files, STARTER_FILES);
@@ -88,7 +96,7 @@ async function runTests() {
     memoryStorage.clear();
 
     const authStore = useAuthStore();
-    authStore.user = { uid: "usr_evaluator_789", email: "evaluator@genesis.app" };
+    await ensureAuthenticated(authStore);
     const projectsStore = useProjectsStore();
 
     // Create 3 projects with staggered timestamps
@@ -118,7 +126,7 @@ async function runTests() {
     memoryStorage.clear();
 
     const authStore = useAuthStore();
-    authStore.user = { uid: "usr_evaluator_789", email: "evaluator@genesis.app" };
+    await ensureAuthenticated(authStore);
     const projectsStore = useProjectsStore();
 
     const proj = await projectsStore.createProject({ name: "Old Name" });
@@ -151,7 +159,7 @@ async function runTests() {
     memoryStorage.clear();
 
     const authStore = useAuthStore();
-    authStore.user = { uid: "usr_evaluator_789", email: "evaluator@genesis.app" };
+    await ensureAuthenticated(authStore);
     const projectsStore = useProjectsStore();
 
     const proj1 = await projectsStore.createProject({ name: "Project 1" });
@@ -190,7 +198,7 @@ async function runTests() {
     memoryStorage.clear();
 
     const authStore = useAuthStore();
-    authStore.user = { uid: "usr_evaluator_789", email: "evaluator@genesis.app" };
+    await ensureAuthenticated(authStore);
     const projectsStore = useProjectsStore();
     const workspaceStore = useWorkspaceStore();
 
@@ -224,7 +232,7 @@ async function runTests() {
     memoryStorage.clear();
 
     const authStore = useAuthStore();
-    authStore.user = { uid: "usr_evaluator_789", email: "evaluator@genesis.app" };
+    await ensureAuthenticated(authStore);
     const projectsStore = useProjectsStore();
     const workspaceStore = useWorkspaceStore();
 
@@ -264,7 +272,7 @@ async function runTests() {
     memoryStorage.clear();
 
     const authStore = useAuthStore();
-    authStore.user = { uid: "usr_evaluator_789", email: "evaluator@genesis.app" };
+    await ensureAuthenticated(authStore);
     const projectsStore = useProjectsStore();
     const workspaceStore = useWorkspaceStore();
 

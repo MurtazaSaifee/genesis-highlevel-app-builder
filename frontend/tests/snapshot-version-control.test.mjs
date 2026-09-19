@@ -16,6 +16,14 @@ globalThis.localStorage = {
   clear: () => memoryStorage.clear(),
 };
 
+async function ensureAuthenticated(authStore) {
+  try {
+    await authStore.signUp(`evaluator_${Date.now()}_${Math.random().toString(36).slice(2, 6)}@genesis.app`, "GenesisPass123!");
+  } catch (_e) {
+    authStore.user = { uid: "usr_evaluator_789", email: "evaluator@genesis.app" };
+  }
+}
+
 async function runTests() {
   // Test Suite 1: Initial Snapshots Store State
   console.log("\n1. Testing Snapshots Store Initial State...");
@@ -55,7 +63,7 @@ async function runTests() {
     assert.equal(failedUnauth, null);
 
     // Mock authenticated user
-    authStore.user = { uid: "usr_evaluator_789", email: "evaluator@genesis.app" };
+    await ensureAuthenticated(authStore);
 
     // Successful snapshot creation
     const snapshot = await snapshotsStore.createSnapshot("proj_123", {
@@ -73,7 +81,7 @@ async function runTests() {
     assert.ok(snapshot);
     assert.ok(snapshot.id);
     assert.equal(snapshot.projectId, "proj_123");
-    assert.equal(snapshot.userId, "usr_evaluator_789");
+    assert.equal(snapshot.userId, authStore.userId);
     assert.equal(snapshot.trigger, "generation");
     assert.equal(snapshot.description, "Build Contacts CRM with live search");
     assert.equal(snapshot.prompt, "Build a contacts CRM with live search and appointments");
@@ -93,7 +101,7 @@ async function runTests() {
     memoryStorage.clear();
 
     const authStore = useAuthStore();
-    authStore.user = { uid: "usr_evaluator_789", email: "evaluator@genesis.app" };
+    await ensureAuthenticated(authStore);
     const snapshotsStore = useSnapshotsStore();
 
     const testProjId = `proj_sort_${Date.now()}`;
@@ -137,7 +145,7 @@ async function runTests() {
     memoryStorage.clear();
 
     const authStore = useAuthStore();
-    authStore.user = { uid: "usr_evaluator_789", email: "evaluator@genesis.app" };
+    await ensureAuthenticated(authStore);
     const workspaceStore = useWorkspaceStore();
     const snapshotsStore = useSnapshotsStore();
 
@@ -167,7 +175,7 @@ async function runTests() {
     memoryStorage.clear();
 
     const authStore = useAuthStore();
-    authStore.user = { uid: "usr_evaluator_789", email: "evaluator@genesis.app" };
+    await ensureAuthenticated(authStore);
     const projectsStore = useProjectsStore();
     const workspaceStore = useWorkspaceStore();
     const snapshotsStore = useSnapshotsStore();
@@ -239,7 +247,7 @@ async function runTests() {
     memoryStorage.clear();
 
     const authStore = useAuthStore();
-    authStore.user = { uid: "usr_evaluator_789", email: "evaluator@genesis.app" };
+    await ensureAuthenticated(authStore);
     const projectsStore = useProjectsStore();
     const workspaceStore = useWorkspaceStore();
     const snapshotsStore = useSnapshotsStore();

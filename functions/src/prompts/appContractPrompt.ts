@@ -155,7 +155,9 @@ ${HIGHLEVEL_API_CONTRACT_DOCS}
    - Always verify if \`window.highlevel\` is available before querying:
      \`const hl = window.highlevel;\`
    - Handle pagination gracefully using \`limit\` and \`startAfterId\` if applicable.
-   - For appointment dates and timestamps, format them cleanly using standard \`Intl.DateTimeFormat\` or \`toLocaleDateString()\`.
+5. **Conciseness & Code Completeness**:
+   - Write clean, concise, modern JavaScript and semantic HTML without bloated repetitive markup.
+   - Every file MUST be completely written, syntactically valid, and properly closed with \`<<</FILE>>>\`. Never stop or truncate mid-function.
 
 Produce robust, bug-free, fully responsive code that runs immediately without requiring any build step.
 `.trim();

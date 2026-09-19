@@ -37,11 +37,15 @@ async function runTests() {
   // Step 1: User Authentication & HighLevel Sandbox Synchronization
   // -------------------------------------------------------------
   console.log("\n1. Testing User Auth & HighLevel Sandbox State Hydration...");
-  authStore.user = {
-    uid: "usr_e2e_evaluator",
-    email: "evaluator@highlevel-genesis.test",
-    displayName: "HighLevel Evaluator",
-  };
+  try {
+    await authStore.signUp(`evaluator_${Date.now()}@highlevel-genesis.test`, "GenesisPass123!");
+  } catch (_e) {
+    authStore.user = {
+      uid: "usr_e2e_evaluator",
+      email: "evaluator@highlevel-genesis.test",
+      displayName: "HighLevel Evaluator",
+    };
+  }
 
   hlStore.isConnected = true;
   hlStore.locationId = "loc_e2e_sandbox_001";

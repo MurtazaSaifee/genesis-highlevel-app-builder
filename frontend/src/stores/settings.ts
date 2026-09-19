@@ -14,7 +14,7 @@ export interface BYOKSettings {
 export const PRESET_DEFAULTS: Record<LLMProviderPreset, Omit<BYOKSettings, "provider" | "apiKey">> = {
   google: {
     baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai/",
-    model: "gemini-2.0-flash",
+    model: "gemini-3.1-flash-lite",
     temperature: 0.7,
   },
   openai: {

@@ -11,12 +11,12 @@ const env: Record<string, string | undefined> =
       : {};
 
 const firebaseConfig = {
-  apiKey: env.VITE_FIREBASE_API_KEY || "demo-api-key",
+  apiKey: env.VITE_FIREBASE_API_KEY || "dummy-firebase-api-key",
   authDomain: env.VITE_FIREBASE_AUTH_DOMAIN || "genesis-hl-builder-1.firebaseapp.com",
   projectId: env.VITE_FIREBASE_PROJECT_ID || "genesis-hl-builder-1",
   storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET || "genesis-hl-builder-1.firebasestorage.app",
-  messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID || "123456789",
-  appId: env.VITE_FIREBASE_APP_ID || "1:123456789:web:abcdef123456",
+  messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID || "19555428517",
+  appId: env.VITE_FIREBASE_APP_ID || "1:19555428517:web:cd567b68f22a0752ff454c",
 };
 
 // Initialize Firebase singleton
