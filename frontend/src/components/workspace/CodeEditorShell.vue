@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, onMounted, onUnmounted, watch } from "vue";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { useSnapshotsStore } from "@/stores/snapshots";
 import MonacoEditor from "./MonacoEditor.vue";
+import DiffEditor from "./DiffEditor.vue";
 import FileTree from "./FileTree.vue";
 import {
   FileCode,
@@ -20,12 +21,25 @@ import {
   CheckCheck,
   AlertCircle,
   History,
+  Code,
+  GitCompare,
 } from "lucide-vue-next";
 
 const workspaceStore = useWorkspaceStore();
 const snapshotsStore = useSnapshotsStore();
 
+const viewMode = ref<"code" | "diff">("code");
 const copied = ref(false);
+
+// Auto-switch to code mode when streaming begins so user sees real-time generation
+watch(
+  () => workspaceStore.isStreaming,
+  (isStreaming) => {
+    if (isStreaming && viewMode.value === "diff") {
+      viewMode.value = "code";
+    }
+  }
+);
 
 function handleKeyDown(e: KeyboardEvent) {
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
@@ -145,7 +159,41 @@ function handleCloseTab(filename: string, event: MouseEvent) {
       </div>
 
       <!-- Right Actions in Editor Header -->
-      <div class="flex items-center gap-1 shrink-0 ml-2">
+      <div class="flex items-center gap-1.5 shrink-0 ml-2">
+        <!-- Mode Switcher: Code vs Diff -->
+        <div class="flex items-center bg-muted/70 p-0.5 rounded-md border border-border/60 shrink-0">
+          <button
+            type="button"
+            @click="viewMode = 'code'"
+            :class="[
+              'h-6 px-2 rounded text-[11px] font-medium flex items-center gap-1 transition-all cursor-pointer',
+              viewMode === 'code'
+                ? 'bg-background text-foreground shadow-2xs'
+                : 'text-muted-foreground hover:text-foreground',
+            ]"
+            title="Standard Code Editor"
+          >
+            <Code class="h-3 w-3 text-amber-500" />
+            <span class="hidden sm:inline">Code</span>
+          </button>
+          <button
+            type="button"
+            @click="viewMode = 'diff'"
+            :class="[
+              'h-6 px-2 rounded text-[11px] font-medium flex items-center gap-1 transition-all cursor-pointer',
+              viewMode === 'diff'
+                ? 'bg-background text-foreground shadow-2xs'
+                : 'text-muted-foreground hover:text-foreground',
+            ]"
+            title="Monaco Diff View (Compare with prior snapshot)"
+          >
+            <GitCompare class="h-3 w-3 text-amber-500" />
+            <span class="hidden sm:inline">Diff</span>
+          </button>
+        </div>
+
+        <div class="h-4 w-px bg-border shrink-0 mx-0.5 hidden sm:block"></div>
+
         <!-- History / Snapshots Trigger -->
         <button
           type="button"
@@ -204,7 +252,8 @@ function handleCloseTab(filename: string, event: MouseEvent) {
       <!-- Monaco Code Editor Viewport -->
       <div class="flex-1 h-full min-w-0 bg-[#1e1e1e] overflow-hidden relative">
         <slot name="editor">
-          <MonacoEditor />
+          <DiffEditor v-if="viewMode === 'diff'" />
+          <MonacoEditor v-else />
         </slot>
       </div>
     </div>
@@ -237,6 +286,12 @@ function handleCloseTab(filename: string, event: MouseEvent) {
       </div>
 
       <div class="flex items-center gap-3">
+        <span
+          v-if="viewMode === 'diff'"
+          class="uppercase text-[10px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-400 font-sans font-semibold border border-amber-500/30"
+        >
+          Diff Mode
+        </span>
         <span class="text-primary font-medium">{{ workspaceStore.activeFilename }}</span>
         <span class="uppercase text-[10px] px-1 py-0.2 rounded bg-muted font-sans font-semibold">
           {{ workspaceStore.activeLanguage }}

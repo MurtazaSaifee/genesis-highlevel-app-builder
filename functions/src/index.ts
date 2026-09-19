@@ -47,3 +47,20 @@ export {
   sendSSE,
 } from "./routes/streamGenerate";
 
+// Phase 6: Bonus Capabilities Suite
+export * as rateLimiter from "./middleware/rateLimiter";
+export {
+  rateLimiter as rateLimiterMiddleware,
+  rateLimitCheck,
+  checkRateLimit,
+  resetRateLimits,
+} from "./middleware/rateLimiter";
+
+export {
+  hlWebhook,
+  handleHlWebhook,
+  validateWebhookPayload,
+  resolveTargetProjectId,
+} from "./routes/webhook";
+
+

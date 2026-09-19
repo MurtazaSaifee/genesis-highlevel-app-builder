@@ -24,6 +24,7 @@ import {
   buildIterativeRefinementPrompt,
 } from "../prompts/appContractPrompt";
 import { MultiFileStreamParser } from "../utils/streamParser";
+import { rateLimitCheck } from "../middleware/rateLimiter";
 
 export interface StreamGeneratePayload {
   prompt: string;
@@ -248,6 +249,17 @@ export async function handleStreamGenerate(req: Request, res: Response): Promise
     res.status(401).json({
       error: "Unauthorized: Missing or invalid Firebase authentication ID token.",
     });
+    return;
+  }
+
+  // Rate Limiting (Guard against excessive LLM generation: 10 req/min per user)
+  const isAllowed = await rateLimitCheck(req, res, {
+    max: 10,
+    windowMs: 60000,
+    keyGenerator: () => `user:${userId}`,
+    message: "Generation rate limit exceeded. Maximum 10 requests per minute.",
+  });
+  if (!isAllowed) {
     return;
   }
 
