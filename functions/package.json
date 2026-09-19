@@ -9,7 +9,8 @@
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log",
     "test": "node tests/oauth-state.test.mjs && node tests/llm-service.test.cjs && node tests/stream-generate.test.cjs && node tests/rate-limiter.test.cjs && node tests/webhook.test.cjs",
-    "test:integration": "firebase emulators:exec --only auth,firestore,functions \"node tests/oauth-integration.test.cjs && node tests/token-refresh.test.cjs && node tests/highlevel-proxy.test.cjs\""
+    "test:integration": "firebase emulators:exec --only auth,firestore,functions \"node tests/oauth-integration.test.cjs && node tests/token-refresh.test.cjs && node tests/highlevel-proxy.test.cjs && node tests/e2e-sandbox-verification.test.cjs\"",
+    "test:e2e": "firebase emulators:exec --only auth,firestore,functions \"node tests/e2e-sandbox-verification.test.cjs\""
   },
   "engines": {
     "node": "22"

@@ -11,6 +11,7 @@
  */
 
 import * as admin from "firebase-admin";
+import { FieldValue } from "firebase-admin/firestore";
 import { onRequest, Request } from "firebase-functions/v2/https";
 import { Response } from "express";
 import { rateLimitCheck } from "../middleware/rateLimiter";
@@ -200,7 +201,7 @@ export async function handleHlWebhook(
     locationId: typeof payload.locationId === "string" ? payload.locationId : null,
     payload,
     source: "highlevel-webhook",
-    receivedAt: admin.firestore.FieldValue.serverTimestamp(),
+    receivedAt: FieldValue.serverTimestamp(),
     timestamp: now,
   };
 

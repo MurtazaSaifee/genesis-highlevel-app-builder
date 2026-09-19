@@ -9,7 +9,7 @@
  * Sandbox Mock Engine when testing in Demo Sandbox mode.
  */
 
-import { auth } from "./firebase";
+import { auth } from "./firebase.ts";
 
 export interface HighLevelContact {
   id: string;
@@ -110,16 +110,21 @@ export interface HighLevelClientOptions {
  * Returns default Cloud Function base URL
  */
 export function getDefaultProxyBaseUrl(): string {
-  if (import.meta.env.VITE_FUNCTIONS_BASE_URL) {
-    return `${import.meta.env.VITE_FUNCTIONS_BASE_URL}/hlProxy`;
+  const env =
+    (typeof import.meta !== "undefined" && (import.meta.env as Record<string, string | boolean | undefined>)) ||
+    (typeof process !== "undefined" && (process.env as Record<string, string | undefined>)) ||
+    {};
+
+  if (env.VITE_FUNCTIONS_BASE_URL) {
+    return `${env.VITE_FUNCTIONS_BASE_URL}/hlProxy`;
   }
   const isEmulator =
-    import.meta.env.VITE_USE_EMULATORS !== undefined
-      ? import.meta.env.VITE_USE_EMULATORS === "true"
-      : import.meta.env.DEV;
+    env.VITE_USE_EMULATORS !== undefined
+      ? env.VITE_USE_EMULATORS === "true" || env.VITE_USE_EMULATORS === true
+      : env.DEV !== false;
 
   if (isEmulator) {
-    const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID || "genesis-hl-builder-1";
+    const projectId = env.VITE_FIREBASE_PROJECT_ID || "genesis-hl-builder-1";
     return `http://127.0.0.1:5001/${projectId}/us-central1/hlProxy`;
   }
 
